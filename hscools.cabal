@@ -1,0 +1,21 @@
+Name:                hscool
+Version:             0.1
+Synopsis:            A toy language from Coursera compilers course.
+Homepage:            https://www.coursera.org/course/compilers
+License:             MIT
+Author:              Aleksey Kladov
+Maintainer:          Aleksey Kladov
+Category:            Language
+Build-type:          Simple
+Cabal-version:       >=1.2
+
+
+Executable hscool
+  Main-is:           Hscool.hs
+  hs-source-dirs:    src
+  Build-depends:     base
+                   , array
+                   , containers
+
+  Build-tools:       alex
+                   , happy
