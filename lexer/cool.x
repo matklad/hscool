@@ -1,6 +1,8 @@
 {
 module Main (main) where
 import qualified Data.Map as Map
+import Data.Char
+import Control.Monad
 }
 %wrapper "basic"
 
@@ -13,66 +15,107 @@ $graphic    = $printable # $white
 tokens :-
 
   $white+               ;
-  $digit+ {\s -> Int}
-  [$digit $alpha \_]+ {\s -> processId}
+  "@" {\s -> At}
+  ":" {\s -> Colon}
+  "," {\s -> Coma}
+  "=>" {\s -> Darrow}
+  "/" {\s -> Div}
+  "." {\s -> Dot}
+  "=" {\s -> Eq}
+  "{" {\s -> Lbrace}
+  "<=" {\s -> Le}
+  "(" {\s -> Lparen}
+  "<" {\s -> Lt}
+  "-" {\s -> Minus}
+  "*" {\s -> Mult}
+  "~" {\s -> Neg}
+  "+" {\s -> Plus}
+  "}" {\s -> Rbrace}
+  ")" {\s -> Rparen}
+  ";" {\s -> Semi}
+  $digit+ {\s -> IntConst}
+  [$digit $alpha \_]+ {processId}
   @string {\s -> StrConst}
 {
 -- Each action has type :: String -> Token
 
   -- The token type:
 data Token =
-  Class
+  Assign
+  |At
+  |BoolConst
+  |Case
+  |Class
+  |Colon
+  |Coma
+  |Darrow
+  |Div
+  |Dot
   |Else
+  |Eof
+  |Eq
+  |Error
+  |Esac
   |Fi
   |If
   |In
   |Inherits
-  |Let
-  |Loop
-  |Pool
-  |Then
-  |While
-  |Case
-  |Esac
-  |Of
-  |Darrow
-  |New
-  |Isvoid
-  |StrConst
   |IntConst
-  |BoolConst
-  |Typeid
-  |Objectid
-  |Assign
-  |Not
+  |IsVoid
+  |Lbrace
   |Le
-  |Error
+  |Let
   |LetStmt
+  |Loop
+  |Lparen
+  |Lt
+  |Minus
+  |Mult
+  |Neg
+  |New
+  |Not
+  |ObjectId
+  |Of
+  |Plus
+  |Pool
+  |Rbrace
+  |Rparen
+  |Semi
+  |StrConst
+  |Then
+  |TypeId
+  |While
+   deriving (Show, Eq)
 
 processId :: String -> Token
-processId s =
+processId s
+  | s' == "false" && (isLower $ head s) = BoolConst
+  | s' == "true" && (isLower $ head s) = BoolConst
+  | s' `Map.member` keywordMap = keywordMap Map.! s'
+  | otherwise = ObjectId
   where
     keywordMap = Map.fromList [
-      ("class"),
-      ("else"),
-      ("fi"),
-      ("if"),
-      ("in"),
-      ("inherits"),
-      ("isvoid"),
-      ("let"),
-      ("loop"),
-      ("pool"),
-      ("then"),
-      ("while"),
-      ("case"),
-      ("esac"),
-      ("new"),
-      ("of"),
-      ("not")
+      ("class", Class),
+      ("else", Else),
+      ("fi", Fi),
+      ("if", If),
+      ("in", In),
+      ("inherits", Inherits),
+      ("isvoid", IsVoid),
+      ("let", Let),
+      ("loop", Loop),
+      ("pool", Pool),
+      ("then", Then),
+      ("while", While),
+      ("case", Case),
+      ("esac", Esac),
+      ("new", New),
+      ("of", Of),
+      ("not", Not)
       ]
+    s' = map toLower s
 
 main = do
   s <- getContents
-  print (alexScanTokens s)
+  forM (alexScanTokens s) print
 }
