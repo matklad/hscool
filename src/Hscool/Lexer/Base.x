@@ -24,28 +24,30 @@ $graphic = $printable # $white
 
 tokens :-
   $white+               ;
-  "@"  {\(AlexPn _ c _) s -> (c, At)}
-  ":"  {\(AlexPn _ c _) s -> (c, Colon)}
-  ","  {\(AlexPn _ c _) s -> (c, Coma)}
-  "=>" {\(AlexPn _ c _) s -> (c, Darrow)}
-  "/"  {\(AlexPn _ c _) s -> (c, Div)}
-  "."  {\(AlexPn _ c _) s -> (c, Dot)}
-  "="  {\(AlexPn _ c _) s -> (c, Eq)}
-  "{"  {\(AlexPn _ c _) s -> (c, Lbrace)}
-  "<=" {\(AlexPn _ c _) s -> (c, Le)}
-  "("  {\(AlexPn _ c _) s -> (c, Lparen)}
-  "<"  {\(AlexPn _ c _) s -> (c, Lt)}
-  "-"  {\(AlexPn _ c _) s -> (c, Minus)}
-  "*"  {\(AlexPn _ c _) s -> (c, Mult)}
-  "~"  {\(AlexPn _ c _) s -> (c, Neg)}
-  "+"  {\(AlexPn _ c _) s -> (c, Plus)}
-  "}"  {\(AlexPn _ c _) s -> (c, Rbrace)}
-  ")"  {\(AlexPn _ c _) s -> (c, Rparen)}
-  ";"  {\(AlexPn _ c _) s -> (c, Semi)}
+  "<-"
+  | "@"
+  | ":"
+  | ","
+  | "=>"
+  | "/"
+  | "."
+  | "="
+  | "{"
+  | "<="
+  | "("
+  | "<"
+  | "-"
+  | "*"
+  | "~"
+  | "+"
+  | "}"
+  | ")"
+  | ";"  {\(AlexPn _ c _) s -> (c, simpleTokenMap Map.! s)}
 
   $digit+                          {\(AlexPn _ c _) s -> (c, IntConst s)}
   [$alpha \_]([$digit $alpha \_]*) {\(AlexPn _ c _) s -> (c, string2Token s)}
   @string                          {\(AlexPn _ c _) s -> (c, StrConst s)}
+
 {
 
 keywordMap :: Map String Token
@@ -68,6 +70,29 @@ keywordMap = Map.fromList
              , ("of", Of)
              , ("not", Not)
              ]
+
+simpleTokenMap :: Map String Token
+simpleTokenMap = Map.fromList
+                 [ ("<-", Assign)
+                 , ("@", At)
+                 , (":", Colon)
+                 , (",", Coma)
+                 , ("=>", Darrow)
+                 , ("/", Div)
+                 , (".", Dot)
+                 , ("=", Eq)
+                 , ("{", Lbrace)
+                 , ("<=", Le)
+                 , ("(", Lparen)
+                 , ("<", Lt)
+                 , ("-", Minus)
+                 , ("*", Mult)
+                 , ("~", Neg)
+                 , ("+", Plus)
+                 , ("}", Rbrace)
+                 , (")", Rparen)
+                 , (";", Semi)
+                 ]
 
 string2Token :: String -> Token
 string2Token "" = error "string2Token: empty string"
