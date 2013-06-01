@@ -1,86 +1,91 @@
 {
 module Hscool.Lexer.Base where
-import qualified Data.Map as Map
-import Data.Char
-import Control.Monad
-import System.Environment
-import Control.Applicative
-import Text.Printf
 
-import Hscool.Types
+import Control.Applicative ((<$>))
+import Control.Monad (forM)
+import Data.Char (isLower, isUpper, toLower)
+
+import Data.Map (Map)
+import qualified Data.Map as Map
+
+import Hscool.Types (Token(..))
 }
+
 %wrapper "posn"
 
 $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
+$symbol = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
 $graphic    = $printable # $white
 
 @string     = \" ($graphic # \")* \"
 
 tokens :-
-
   $white+               ;
-  "@"  {\(AlexPn _ c _) s -> (c, At)}
-  ":"  {\(AlexPn _ c _) s -> (c, Colon)}
-  ","  {\(AlexPn _ c _) s -> (c, Coma)}
-  "=>" {\(AlexPn _ c _) s -> (c, Darrow)}
-  "/"  {\(AlexPn _ c _) s -> (c, Div)}
-  "."  {\(AlexPn _ c _) s -> (c, Dot)}
-  "="  {\(AlexPn _ c _) s -> (c, Eq)}
-  "{"  {\(AlexPn _ c _) s -> (c, Lbrace)}
-  "<=" {\(AlexPn _ c _) s -> (c, Le)}
-  "("  {\(AlexPn _ c _) s -> (c, Lparen)}
-  "<"  {\(AlexPn _ c _) s -> (c, Lt)}
-  "-"  {\(AlexPn _ c _) s -> (c, Minus)}
-  "*"  {\(AlexPn _ c _) s -> (c, Mult)}
-  "~"  {\(AlexPn _ c _) s -> (c, Neg)}
-  "+"  {\(AlexPn _ c _) s -> (c, Plus)}
-  "}"  {\(AlexPn _ c _) s -> (c, Rbrace)}
-  ")"  {\(AlexPn _ c _) s -> (c, Rparen)}
-  ";"  {\(AlexPn _ c _) s -> (c, Semi)}
-
+  $symbol / { isKnownOp }
+            { \(AlexPn _ c _ ) s -> (c, string2Op s) }
   $digit+                 {\(AlexPn _ c _) s -> (c, IntConst s)}
-  [$digit $alpha \_]+     {\(AlexPn _ c _) s -> (c, processId s)}
+  -- FIXME(superbobry): do we allow identifiers like '42foo'?
+  [$digit $alpha \_]+     {\(AlexPn _ c _) s -> (c, string2Token s)}
   @string                 {\(AlexPn _ c _) s -> (c, StrConst s)}
 {
--- Each action has type :: String -> Token
 
+isKnownOp :: String -> AlexInput -> Int -> AlexInput -> Bool
+isKnownOp s _left _len _right = s `Map.member` opMap
 
-processId :: String -> Token
-processId s
+opMap :: Map String Token
+opMap = Map.fromList
+        [ ("@", At)
+        , (":", Colon)
+        , (",", Coma)
+        , ("=>", Darrow)
+        , ("/", Div)
+        , (".", Dot)
+        , ("{", Lbrace)
+        , ("<=", Le)
+        , ("(" , Lparen)
+        , ("<" , Lt)
+        , ("-" , Minus)
+        , ("*" , Mult)
+        , ("~" , Neg)
+        , ("+" , Plus)
+        , ("}" , Rbrace)
+        , (")" , Rparen)
+        , (";" , Semi)
+        ]
+
+string2Op :: String -> Token
+string2Op = (opMap Map.!)
+
+keywordMap :: Map String Token
+keywordMap = Map.fromList
+             [ ("class", Class)
+             , ("else", Else)
+             , ("fi", Fi)
+             , ("if", If)
+             , ("in", In)
+             , ("inherits", Inherits)
+             , ("isvoid", IsVoid)
+             , ("let", Let)
+             , ("loop", Loop)
+             , ("pool", Pool)
+             , ("then", Then)
+             , ("while", While)
+             , ("case", Case)
+             , ("esac", Esac)
+             , ("new", New)
+             , ("of", Of)
+             , ("not", Not)
+             ]
+
+string2Token :: String -> Token
+string2Token "" = error "string2Token: empty string"
+string2Token s@(ch:_)
   | s' `Map.member` keywordMap = keywordMap Map.! s'
-  | isLower $ head s = if s' `elem` ["true", "false"]
-                       then BoolConst s'
-                       else ObjectId s
-  | isUpper $ head s = TypeId s
+  | isUpper ch = TypeId s
+  | isLower ch && s' `elem` ["true", "false"] = BoolConst s'
   | otherwise = ObjectId s
   where
-    keywordMap = Map.fromList [
-      ("class", Class),
-      ("else", Else),
-      ("fi", Fi),
-      ("if", If),
-      ("in", In),
-      ("inherits", Inherits),
-      ("isvoid", IsVoid),
-      ("let", Let),
-      ("loop", Loop),
-      ("pool", Pool),
-      ("then", Then),
-      ("while", While),
-      ("case", Case),
-      ("esac", Esac),
-      ("new", New),
-      ("of", Of),
-      ("not", Not)
-      ]
     s' = map toLower s
 
-main = do
-  fileName <- head <$> getArgs
-  s <- readFile =<< head <$> getArgs
-
-  printf "#name \"%s\"\n" fileName
-  forM (alexScanTokens s)
-    (\(c, t) -> printf "#%d %s\n" c (show t))
 }
