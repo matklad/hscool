@@ -7,6 +7,10 @@ import Data.Char (isLower, isUpper, toLower)
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Control.Monad (forM_)
+import System.Environment (getArgs)
+import Text.Printf (printf)
+
 import Hscool.Types (Token(..))
 }
 
@@ -87,4 +91,12 @@ string2Token s@(ch:_)
   where
     s' = map toLower s
 
+-- this should be here because I said so
+main :: IO ()
+main = do
+    [fileName] <- getArgs
+    contents <- readFile fileName
+    printf "#name \"%s\"\n" fileName
+    forM_ (alexScanTokens contents) $ \(c, t) ->
+        printf "#%d %s\n" c (show t)
 }
