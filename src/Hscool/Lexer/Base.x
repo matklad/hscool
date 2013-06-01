@@ -39,9 +39,9 @@ tokens :-
   ")"  {\(AlexPn _ c _) s -> (c, Rparen)}
   ";"  {\(AlexPn _ c _) s -> (c, Semi)}
 
-  $digit+                 {\(AlexPn _ c _) s -> (c, IntConst)}
+  $digit+                 {\(AlexPn _ c _) s -> (c, IntConst s)}
   [$digit $alpha \_]+     {\(AlexPn _ c _) s -> (c, processId s)}
-  @string                 {\(AlexPn _ c _) s -> (c, StrConst)}
+  @string                 {\(AlexPn _ c _) s -> (c, StrConst s)}
 {
 -- Each action has type :: String -> Token
 
@@ -50,10 +50,10 @@ processId :: String -> Token
 processId s
   | s' `Map.member` keywordMap = keywordMap Map.! s'
   | isLower $ head s = if s' `elem` ["true", "false"]
-                       then BoolConst
-                       else ObjectId
-  | isUpper $ head s = TypeId
-  | otherwise = ObjectId
+                       then BoolConst s'
+                       else ObjectId s
+  | isUpper $ head s = TypeId s
+  | otherwise = ObjectId s
   where
     keywordMap = Map.fromList [
       ("class", Class),

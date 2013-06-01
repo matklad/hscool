@@ -3,7 +3,7 @@ module Hscool.Types where
 data Token =
   Assign
   |At
-  |BoolConst
+  |BoolConst String
   |Case
   |Class
   |Colon
@@ -20,7 +20,7 @@ data Token =
   |If
   |In
   |Inherits
-  |IntConst
+  |IntConst String
   |IsVoid
   |Lbrace
   |Le
@@ -34,15 +34,15 @@ data Token =
   |Neg
   |New
   |Not
-  |ObjectId
+  |ObjectId String
   |Of
   |Plus
   |Pool
   |Rbrace
   |Rparen
   |Semi
-  |StrConst
+  |StrConst String
   |Then
-  |TypeId
+  |TypeId String
   |While
   deriving (Show, Eq)
