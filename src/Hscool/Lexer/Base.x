@@ -1,4 +1,9 @@
 {
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DoAndIfThenElse #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# OPTIONS_GHC -funbox-strict-fields #-}
+
 module Hscool.Lexer.Base where
 
 import Debug.Trace (traceShow)
@@ -14,7 +19,7 @@ import Text.Printf (printf)
 import Hscool.Types (Token(..))
 }
 
-%wrapper "posn"
+%wrapper "monadUserState"
 
 $digit   = 0-9
 $alpha   = [a-zA-Z]
@@ -24,31 +29,36 @@ $graphic = $printable # $white
 
 tokens :-
   $white+               ;
-  "<-"
-  | "@"
-  | ":"
-  | ","
-  | "=>"
-  | "/"
-  | "."
-  | "="
-  | "{"
-  | "<="
-  | "("
-  | "<"
-  | "-"
-  | "*"
-  | "~"
-  | "+"
-  | "}"
-  | ")"
-  | ";"  {\(AlexPn _ c _) s -> (c, simpleTokenMap Map.! s)}
-
-  $digit+                          {\(AlexPn _ c _) s -> (c, IntConst s)}
-  [$alpha \_]([$digit $alpha \_]*) {\(AlexPn _ c _) s -> (c, string2Token s)}
-  @string                          {\(AlexPn _ c _) s -> (c, StrConst s)}
-
+    "<-" | "@" | ":" | ","  | "=>" | "/"
+  | "."  | "=" | "{" | "<=" | "("  | "<"
+  | "-"  | "*" | "~" | "+"  | "}"  | ")"
+  | ";"                   {tokenPos (simpleTokenMap Map.!)}
+  $digit+                 {tokenPos IntConst}
+  -- -- FIXME(superbobry): do we allow identifiers like '42foo'?
+  [$digit $alpha \_]+     {tokenPos string2Token}
+  @string                 {tokenPos StrConst}
 {
+
+type AlexUserState = ()
+
+alexInitUserState :: AlexUserState
+alexInitUserState = ()
+
+alexModifyUserState :: (AlexUserState -> AlexUserState) -> Alex ()
+alexModifyUserState f = Alex $ \s@(AlexState { alex_ust }) ->
+    Right (s { alex_ust = f alex_ust }, ())
+
+alexGetPos :: Alex AlexPosn
+alexGetPos = Alex $ \s@(AlexState { alex_pos }) -> Right (s, alex_pos)
+
+alexEOF :: Alex (Int, Token)
+alexEOF = do
+    AlexPn _offset line _column <- alexGetPos
+    return (line, Eof)
+
+tokenPos :: (String -> Token) -> AlexAction (Int, Token)
+tokenPos token (pos, _ch, _pending, s) len = case pos of
+    AlexPn _offset line _column -> return (line, token $ take len s)
 
 keywordMap :: Map String Token
 keywordMap = Map.fromList
@@ -104,12 +114,22 @@ string2Token s@(ch:_)
   where
     s' = map toLower s
 
--- this should be here because I said so
+
+-- Note(matklad): this should be here because I said so.
 main :: IO ()
 main = do
     [fileName] <- getArgs
     contents <- readFile fileName
     printf "#name \"%s\"\n" fileName
-    forM_ (alexScanTokens contents) $ \(c, t) ->
-        printf "#%d %s\n" c (show t)
+    case runAlex contents (collect []) of
+        Left err     -> putStrLn err
+        Right tokens -> forM_ tokens $ \(line, token) ->
+            printf "#%d %s\n" line (show token)
+  where
+    collect :: [(Int, Token)] -> Alex [(Int, Token)]
+    collect !acc = do
+        (c, token) <- alexMonadScan
+        if token == Eof
+        then return . reverse $! (c, token) : acc
+        else collect $! (c, token) : acc
 }
