@@ -32,11 +32,11 @@ tokens :-
     "<-" | "@" | ":" | ","  | "=>" | "/"
   | "."  | "=" | "{" | "<=" | "("  | "<"
   | "-"  | "*" | "~" | "+"  | "}"  | ")"
-  | ";"                   {tokenPos (simpleTokenMap Map.!)}
-  $digit+                 {tokenPos IntConst}
-  -- -- FIXME(superbobry): do we allow identifiers like '42foo'?
-  [$digit $alpha \_]+     {tokenPos string2Token}
-  @string                 {tokenPos StrConst}
+  | ";"    {tokenPos (simpleTokenMap Map.!)}
+  $digit+  {tokenPos IntConst}
+  [$alpha \_]([$digit $alpha \_]*)
+           {tokenPos string2Token}
+  @string  {tokenPos StrConst}
 {
 
 type AlexUserState = ()
