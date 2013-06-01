@@ -3,6 +3,9 @@ module Lexer.Lexer where
 import qualified Data.Map as Map
 import Data.Char
 import Control.Monad
+import System.Environment
+import Control.Applicative
+import Text.Printf
 
 import Common.Types
 }
@@ -74,6 +77,10 @@ processId s
     s' = map toLower s
 
 main = do
-  s <- getContents
-  forM (alexScanTokens s) print
+  fileName <- head <$> getArgs
+  s <- readFile =<< head <$> getArgs
+
+  printf "#name %s\n" fileName
+  forM (alexScanTokens s)
+    (\(c, t) -> printf "#%d %s\n" c (show t))
 }
