@@ -43,10 +43,9 @@ tokens :-
   ")"  {\(AlexPn _ c _) s -> (c, Rparen)}
   ";"  {\(AlexPn _ c _) s -> (c, Semi)}
 
-  $digit+                 {\(AlexPn _ c _) s -> (c, IntConst s)}
-  -- FIXME(superbobry): do we allow identifiers like '42foo'?
-  [$digit $alpha \_]+     {\(AlexPn _ c _) s -> (c, string2Token s)}
-  @string                 {\(AlexPn _ c _) s -> (c, StrConst s)}
+  $digit+                          {\(AlexPn _ c _) s -> (c, IntConst s)}
+  [$alpha \_]([$digit $alpha \_]*) {\(AlexPn _ c _) s -> (c, string2Token s)}
+  @string                          {\(AlexPn _ c _) s -> (c, StrConst s)}
 {
 
 keywordMap :: Map String Token
