@@ -6,7 +6,7 @@ import Control.Monad
 
 import Common.Types
 }
-%wrapper "basic"
+%wrapper "posn"
 
 $digit = 0-9       -- digits
 $alpha = [a-zA-Z]  -- alphabetic characters
@@ -17,27 +17,28 @@ $graphic    = $printable # $white
 tokens :-
 
   $white+               ;
-  "@" {\s -> At}
-  ":" {\s -> Colon}
-  "," {\s -> Coma}
-  "=>" {\s -> Darrow}
-  "/" {\s -> Div}
-  "." {\s -> Dot}
-  "=" {\s -> Eq}
-  "{" {\s -> Lbrace}
-  "<=" {\s -> Le}
-  "(" {\s -> Lparen}
-  "<" {\s -> Lt}
-  "-" {\s -> Minus}
-  "*" {\s -> Mult}
-  "~" {\s -> Neg}
-  "+" {\s -> Plus}
-  "}" {\s -> Rbrace}
-  ")" {\s -> Rparen}
-  ";" {\s -> Semi}
-  $digit+ {\s -> IntConst}
-  [$digit $alpha \_]+ {processId}
-  @string {\s -> StrConst}
+  "@"  {\(AlexPn _ c _) s -> (c, At)}
+  ":"  {\(AlexPn _ c _) s -> (c, Colon)}
+  ","  {\(AlexPn _ c _) s -> (c, Coma)}
+  "=>" {\(AlexPn _ c _) s -> (c, Darrow)}
+  "/"  {\(AlexPn _ c _) s -> (c, Div)}
+  "."  {\(AlexPn _ c _) s -> (c, Dot)}
+  "="  {\(AlexPn _ c _) s -> (c, Eq)}
+  "{"  {\(AlexPn _ c _) s -> (c, Lbrace)}
+  "<=" {\(AlexPn _ c _) s -> (c, Le)}
+  "("  {\(AlexPn _ c _) s -> (c, Lparen)}
+  "<"  {\(AlexPn _ c _) s -> (c, Lt)}
+  "-"  {\(AlexPn _ c _) s -> (c, Minus)}
+  "*"  {\(AlexPn _ c _) s -> (c, Mult)}
+  "~"  {\(AlexPn _ c _) s -> (c, Neg)}
+  "+"  {\(AlexPn _ c _) s -> (c, Plus)}
+  "}"  {\(AlexPn _ c _) s -> (c, Rbrace)}
+  ")"  {\(AlexPn _ c _) s -> (c, Rparen)}
+  ";"  {\(AlexPn _ c _) s -> (c, Semi)}
+
+  $digit+                 {\(AlexPn _ c _) s -> (c, IntConst)}
+  [$digit $alpha \_]+     {\(AlexPn _ c _) s -> (c, processId s)}
+  @string                 {\(AlexPn _ c _) s -> (c, StrConst)}
 {
 -- Each action has type :: String -> Token
 
