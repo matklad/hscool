@@ -19,46 +19,35 @@ import Hscool.Types (Token(..))
 $digit   = 0-9
 $alpha   = [a-zA-Z]
 $graphic = $printable # $white
-$symbol  = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~\{\}\~\(\)]
 
 @string  = \" ($graphic # \")* \"
 
 tokens :-
   $white+               ;
-  $symbol / { isKnownOp }
-            { \(AlexPn _ c _ ) s -> (c, string2Op s) }
+  "@"  {\(AlexPn _ c _) s -> (c, At)}
+  ":"  {\(AlexPn _ c _) s -> (c, Colon)}
+  ","  {\(AlexPn _ c _) s -> (c, Coma)}
+  "=>" {\(AlexPn _ c _) s -> (c, Darrow)}
+  "/"  {\(AlexPn _ c _) s -> (c, Div)}
+  "."  {\(AlexPn _ c _) s -> (c, Dot)}
+  "="  {\(AlexPn _ c _) s -> (c, Eq)}
+  "{"  {\(AlexPn _ c _) s -> (c, Lbrace)}
+  "<=" {\(AlexPn _ c _) s -> (c, Le)}
+  "("  {\(AlexPn _ c _) s -> (c, Lparen)}
+  "<"  {\(AlexPn _ c _) s -> (c, Lt)}
+  "-"  {\(AlexPn _ c _) s -> (c, Minus)}
+  "*"  {\(AlexPn _ c _) s -> (c, Mult)}
+  "~"  {\(AlexPn _ c _) s -> (c, Neg)}
+  "+"  {\(AlexPn _ c _) s -> (c, Plus)}
+  "}"  {\(AlexPn _ c _) s -> (c, Rbrace)}
+  ")"  {\(AlexPn _ c _) s -> (c, Rparen)}
+  ";"  {\(AlexPn _ c _) s -> (c, Semi)}
+
   $digit+                 {\(AlexPn _ c _) s -> (c, IntConst s)}
   -- FIXME(superbobry): do we allow identifiers like '42foo'?
   [$digit $alpha \_]+     {\(AlexPn _ c _) s -> (c, string2Token s)}
   @string                 {\(AlexPn _ c _) s -> (c, StrConst s)}
 {
-
-isKnownOp :: String -> AlexInput -> Int -> AlexInput -> Bool
-isKnownOp s _left _len _right = s `Map.member` opMap
-
-opMap :: Map String Token
-opMap = Map.fromList
-        [ ("@", At)
-        , (":", Colon)
-        , (",", Coma)
-        , ("=>", Darrow)
-        , ("/", Div)
-        , (".", Dot)
-        , ("{", Lbrace)
-        , ("<=", Le)
-        , ("(" , Lparen)
-        , ("<" , Lt)
-        , ("-" , Minus)
-        , ("*" , Mult)
-        , ("~" , Neg)
-        , ("+" , Plus)
-        , ("}" , Rbrace)
-        , (")" , Rparen)
-        , (";" , Semi)
-        ]
-
-string2Op :: String -> Token
-string2Op = (opMap Map.!)
 
 keywordMap :: Map String Token
 keywordMap = Map.fromList
