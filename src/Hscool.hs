@@ -1,4 +1,4 @@
 module Main where
-import qualified Lexer.Lexer as L
+import qualified Hscool.Lexer.Base as L
 
 main = L.main

@@ -1,5 +1,5 @@
 {
-module Lexer.Lexer where
+module Hscool.Lexer.Base where
 import qualified Data.Map as Map
 import Data.Char
 import Control.Monad
@@ -7,7 +7,7 @@ import System.Environment
 import Control.Applicative
 import Text.Printf
 
-import Common.Types
+import Hscool.Types
 }
 %wrapper "posn"
 

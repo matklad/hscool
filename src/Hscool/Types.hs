@@ -1,4 +1,4 @@
-module Common.Types where
+module Hscool.Types where
 
 data Token =
   Assign
