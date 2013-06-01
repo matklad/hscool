@@ -1,8 +1,7 @@
 {
 module Hscool.Lexer.Base where
 
-import Control.Applicative ((<$>))
-import Control.Monad (forM)
+import Debug.Trace (traceShow)
 import Data.Char (isLower, isUpper, toLower)
 
 import Data.Map (Map)
@@ -13,12 +12,12 @@ import Hscool.Types (Token(..))
 
 %wrapper "posn"
 
-$digit = 0-9       -- digits
-$alpha = [a-zA-Z]  -- alphabetic characters
-$symbol = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~]
-$graphic    = $printable # $white
+$digit   = 0-9
+$alpha   = [a-zA-Z]
+$graphic = $printable # $white
+$symbol  = [\!\#\$\%\&\*\+\.\/\<\=\>\?\@\\\^\|\-\~\{\}\~\(\)]
 
-@string     = \" ($graphic # \")* \"
+@string  = \" ($graphic # \")* \"
 
 tokens :-
   $white+               ;
