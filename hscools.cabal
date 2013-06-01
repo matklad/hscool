@@ -12,10 +12,13 @@ Cabal-version:       >=1.2
 
 Executable hscool
   Main-is:           Hscool.hs
+  other-modules:     Lexer.Lexer
+                   , Common.Types      
   hs-source-dirs:    src
   Build-depends:     base
                    , array
                    , containers
+
 
   Build-tools:       alex
                    , happy
