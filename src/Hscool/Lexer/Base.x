@@ -74,7 +74,7 @@ string2Token :: String -> Token
 string2Token "" = error "string2Token: empty string"
 string2Token s@(ch:_)
   | s' `Map.member` keywordMap = keywordMap Map.! s'
-  | s' `elem` ["true", "false"] = BoolConst s'
+  | isLower ch && s' `elem` ["true", "false"] = BoolConst s'
   | isUpper ch = TypeId s
   | otherwise  = ObjectId s
   where
