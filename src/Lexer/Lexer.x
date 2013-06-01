@@ -48,11 +48,11 @@ tokens :-
 
 processId :: String -> Token
 processId s
+  | s' `Map.member` keywordMap = keywordMap Map.! s'
   | isLower $ head s = if s' `elem` ["true", "false"]
                        then BoolConst
                        else ObjectId
   | isUpper $ head s = TypeId
-  | s' `Map.member` keywordMap = keywordMap Map.! s'
   | otherwise = ObjectId
   where
     keywordMap = Map.fromList [
@@ -80,7 +80,7 @@ main = do
   fileName <- head <$> getArgs
   s <- readFile =<< head <$> getArgs
 
-  printf "#name %s\n" fileName
+  printf "#name \"%s\"\n" fileName
   forM (alexScanTokens s)
     (\(c, t) -> printf "#%d %s\n" c (show t))
 }
