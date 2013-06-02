@@ -16,7 +16,7 @@ import Control.Monad (forM_)
 import System.Environment (getArgs)
 import Text.Printf (printf)
 
-import Hscool.Types (Token(..))
+import Hscool.Types.Token (Token(..))
 }
 
 %wrapper "monadUserState"

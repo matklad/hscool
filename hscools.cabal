@@ -13,8 +13,12 @@ Cabal-version:       >=1.2
 Executable hscool
   Main-is:           Hscool.hs
   other-modules:     Hscool.Lexer.Base
-                   , Hscool.Types      
+                   , Hscool.Parser.Base
+                   , Hscool.Types.Token
+                   , Hscool.Types.AST      
+
   hs-source-dirs:    src
+
   Build-depends:     base
                    , array
                    , containers
