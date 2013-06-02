@@ -30,13 +30,15 @@ tokens :-
   <0>
   $white+               ;
 
-  <0>
-  "(*"     {begin pcomment}
+  <0, pcomment>
+  "(*"     {lvlDown}
+
   <pcomment>
-  "*)"     {begin 0}
+  "*)"     {lvlUp}
 
   <0>
   "--"     {begin mcomment}
+
   <mcomment>
   \n       {begin 0}
 
@@ -44,7 +46,7 @@ tokens :-
   \n       {skip}
 
   <pcomment, mcomment>
-  \* | \) | "-" | ~[\*\)\-\n]+
+  ((~[\*\)\(\-])+) | ( \* | \) | \( | \) | \- )
            {skip}
 
 
@@ -58,20 +60,27 @@ tokens :-
   [$alpha \_]([$digit $alpha \_]*)
            {tokenPos string2Token}
   @string  {tokenPos StrConst}
+
+  .        {tokenPos Error}
 {
 
-type AlexUserState = ()
+type AlexUserState = Int
 
 alexInitUserState :: AlexUserState
-alexInitUserState = ()
+alexInitUserState = 0
 
 alexModifyUserState :: (AlexUserState -> AlexUserState) -> Alex ()
 alexModifyUserState f = Alex $ \s@(AlexState { alex_ust }) ->
     Right (s { alex_ust = f alex_ust }, ())
 
+getLvl :: Alex Int
+getLvl = Alex $ \s@AlexState{alex_ust=lvl} -> Right (s, lvl)
+
+setLvl :: Int -> Alex()
+setLvl lvl = Alex $ \s -> Right (s{alex_ust=lvl}, ())
+
 alexGetPos :: Alex AlexPosn
 alexGetPos = Alex $ \s@(AlexState { alex_pos }) -> Right (s, alex_pos)
-
 
 alexEOF :: Alex (Int, Token)
 alexEOF = do
@@ -81,6 +90,24 @@ alexEOF = do
 tokenPos :: (String -> Token) -> AlexAction (Int, Token)
 tokenPos token (pos, _ch, _pending, s) len = case pos of
     AlexPn _offset line _column -> return (line, token $ take len s)
+
+lvlDown :: AlexAction (Int, Token)
+lvlDown input len = do
+    lvl <- getLvl
+    if lvl == 0
+    then alexSetStartCode pcomment
+    else return ()
+    alexModifyUserState succ
+    skip input len
+
+lvlUp :: AlexAction (Int, Token)
+lvlUp input len = do
+    alexModifyUserState pred
+    lvl <- getLvl
+    if lvl == 0
+    then alexSetStartCode 0
+    else return ()
+    skip input len
 
 keywordMap :: Map String Token
 keywordMap = Map.fromList

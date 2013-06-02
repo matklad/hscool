@@ -16,7 +16,7 @@ data Token =
     | Else
     | Eof
     | Eq
-    | Error
+    | Error String
     | Esac
     | Fi
     | If
@@ -64,7 +64,7 @@ instance Show Token where
     Else -> "ELSE"
     Eof -> "EOF"
     Eq -> "'='"
-    Error -> "ERROR"
+    Error s -> "ERROR " ++ s
     Esac -> "ESAC"
     Fi -> "FI"
     If -> "IF"
