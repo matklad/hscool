@@ -71,9 +71,9 @@ instance Show Token where
     In -> "IN"
     Inherits -> "INHERITS"
     IntConst s -> "INT_CONST " ++ s
-    IsVoid -> "IS_VOID"
+    IsVoid -> "ISVOID"
     Lbrace -> "'{'"
-    Le -> "'<='"
+    Le -> "LE"
     Let -> "LET"
     LetStmt -> "LET_STMT"
     Loop -> "LOOP"
