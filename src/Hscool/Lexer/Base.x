@@ -25,8 +25,8 @@ $digit   = 0-9
 $alpha   = [a-zA-Z]
 $graphic = $printable # $white
 
-@string  = \" ($graphic # \")* \"
-
+-- @string  = \" ($graphic # \")* \"
+@string  = \" (($printable # \") | (\\\"))* \"
 tokens :-
   <0>
   $white+               ;

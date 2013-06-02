@@ -47,4 +47,51 @@ data Token =
     | Then
     | TypeId String
     | While
-    deriving (Show, Eq)
+    deriving Eq
+
+instance Show Token where
+  show t = case t of
+    Assign -> "ASSIGN"
+    At -> "'@'"
+    BoolConst s -> "BOOL_CONST " ++ s
+    Case -> "CASE"
+    Class -> "CLASS"
+    Colon -> "':'"
+    Coma -> "','"
+    Darrow -> "'=>'"
+    Div -> "'/'"
+    Dot -> "'.'"
+    Else -> "ELSE"
+    Eof -> "EOF"
+    Eq -> "'='"
+    Error -> "ERROR"
+    Esac -> "ESAC"
+    Fi -> "FI"
+    If -> "IF"
+    In -> "IN"
+    Inherits -> "INHERITS"
+    IntConst s -> "INT_CONST " ++ s
+    IsVoid -> "IS_VOID"
+    Lbrace -> "'{'"
+    Le -> "'<='"
+    Let -> "LET"
+    LetStmt -> "LET_STMT"
+    Loop -> "LOOP"
+    Lparen -> "'('"
+    Lt -> "'<'"
+    Minus -> "'-'"
+    Mult -> "'*'"
+    Neg -> "'~'"
+    New -> "NEW"
+    Not -> "NOT"
+    ObjectId s -> "OBJECTID " ++ s
+    Of -> "OF"
+    Plus -> "'+'"
+    Pool -> "POOL"
+    Rbrace -> "'}'"
+    Rparen -> "')'"
+    Semi -> "';'"
+    StrConst s -> "STR_CONST " ++ s
+    Then -> "THEN"
+    TypeId s -> "TYPEID " ++ s
+    While -> "WHILE"
