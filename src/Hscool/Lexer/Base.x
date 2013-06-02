@@ -28,11 +28,33 @@ $graphic = $printable # $white
 @string  = \" ($graphic # \")* \"
 
 tokens :-
+  <0>
   $white+               ;
+
+  <0>
+  "(*"     {begin pcomment}
+  <pcomment>
+  "*)"     {begin 0}
+
+  <0>
+  "--"     {begin mcomment}
+  <mcomment>
+  \n       {begin 0}
+
+  <pcomment>
+  \n       {skip}
+
+  <pcomment, mcomment>
+  \* | \) | "-" | ~[\*\)\-\n]+
+           {skip}
+
+
+
     "<-" | "@" | ":" | ","  | "=>" | "/"
   | "."  | "=" | "{" | "<=" | "("  | "<"
   | "-"  | "*" | "~" | "+"  | "}"  | ")"
   | ";"    {tokenPos (simpleTokenMap Map.!)}
+
   $digit+  {tokenPos IntConst}
   [$alpha \_]([$digit $alpha \_]*)
            {tokenPos string2Token}
