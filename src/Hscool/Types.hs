@@ -58,7 +58,7 @@ instance Show Token where
     Class -> "CLASS"
     Colon -> "':'"
     Coma -> "','"
-    Darrow -> "'=>'"
+    Darrow -> "DARROW"
     Div -> "'/'"
     Dot -> "'.'"
     Else -> "ELSE"

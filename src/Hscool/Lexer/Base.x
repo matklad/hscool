@@ -25,7 +25,6 @@ $digit   = 0-9
 $alpha   = [a-zA-Z]
 $graphic = $printable # $white
 
--- @string  = \" ($graphic # \")* \"
 @string  = \" (($printable # \") | (\\\"))* \"
 tokens :-
   <0>
@@ -72,6 +71,7 @@ alexModifyUserState f = Alex $ \s@(AlexState { alex_ust }) ->
 
 alexGetPos :: Alex AlexPosn
 alexGetPos = Alex $ \s@(AlexState { alex_pos }) -> Right (s, alex_pos)
+
 
 alexEOF :: Alex (Int, Token)
 alexEOF = do
@@ -152,6 +152,6 @@ main = do
     collect !acc = do
         (c, token) <- alexMonadScan
         if token == Eof
-        then return . reverse $! (c, token) : acc
+        then return . reverse $! acc
         else collect $! (c, token) : acc
 }
