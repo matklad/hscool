@@ -24,6 +24,8 @@ data Expression =
   | Expression :/ Expression
   | Neg Expression
   | Expression :< Expression
+  | Expression := Expression
+  | Expression :<= Expression
   | Comp Expression
   | IntConst Symbol
   | StringConst Symbol

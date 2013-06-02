@@ -52,13 +52,32 @@ import Hscool.Types.AST
   TYPE      { T.TypeId $$ }
   WHILE     { T.While }
 
-%left '+'
+%left '.'
+%left '@'
+%left '~'
+%left ISVOID
+%left '*' '/'
+%left '+' '-'
+%left LE '<' '='
+%left not
+%right ASSIGN
+
 %%
 
 expr :: { Expression }
 expr
-  : expr '+' expr { $1 :+ $3 }
+  : ID ASSIGN expr      { Assign $1 $3}
+  | expr '+' expr       { $1 :+ $3 }
+  | expr '-' expr       { $1 :- $3 }
+  | expr '*' expr       { $1 :* $3 }
+  | expr '/' expr       { $1 :/ $3 }
+  | '~' expr            { Neg $2 }
+  | expr '<' expr       { $1 :< $3 }
+  | expr LE expr        { $1 :<= $3 }
+  | expr '=' expr       { $1 := $3}
+
   | INT           { IntConst $1 }
+  | STR           { StringConst $1 }
 
 {
 parseError :: [T.Token] -> a
