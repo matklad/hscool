@@ -3,12 +3,16 @@ module Hscool.Types.AST where
 type Symbol = String
 
 data Program = Program [Class]
+             deriving Show
 
 data Class = Class Symbol Symbol [Feature]
+           deriving Show
 
 data Feature = Method Symbol [Formal] Symbol Expression
+             deriving Show
 
 data Formal = Formal Symbol Symbol
+            deriving Show
 
 data Expression =
     Assign Symbol Expression
@@ -33,5 +37,7 @@ data Expression =
   | IsVoid Expression
   | NoExpr
   | Object Symbol
+  deriving Show
 
 data Case = Case
+          deriving Show

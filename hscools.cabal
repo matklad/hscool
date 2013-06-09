@@ -10,8 +10,23 @@ Build-type:          Simple
 Cabal-version:       >=1.2
 
 
-Executable hscool
-  Main-is:           Hscool.hs
+Executable lexer
+  Main-is:           Hscool/Lexer/Main.hs
+  other-modules:     Hscool.Lexer.Base
+                   , Hscool.Types.Token
+                   
+  hs-source-dirs:    src
+
+  Build-depends:     base
+                   , array
+                   , containers
+
+  Build-tools:       alex
+
+
+
+Executable parser
+  Main-is:           Hscool/Parser/Main.hs
   other-modules:     Hscool.Lexer.Base
                    , Hscool.Parser.Base
                    , Hscool.Types.Token
@@ -22,7 +37,6 @@ Executable hscool
   Build-depends:     base
                    , array
                    , containers
-
 
   Build-tools:       alex
                    , happy

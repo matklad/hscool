@@ -121,6 +121,6 @@ parseError :: [T.Token] -> a
 parseError _ = error "Parse error"
 
 main :: IO ()
-main = undefined
+main = getContents >>= print . parse . T.readTokens
 
 }

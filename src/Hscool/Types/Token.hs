@@ -1,5 +1,7 @@
 module Hscool.Types.Token
-    ( Token(..)
+    (
+      Token(..)
+    , readTokens
     ) where
 
 data Token =
@@ -95,3 +97,52 @@ instance Show Token where
     Then -> "THEN"
     TypeId s -> "TYPEID " ++ s
     While -> "WHILE"
+
+readTokens :: String -> [Token]
+readTokens = (map readToken) . lines
+  where
+    readToken = getToken . tail . words
+    getToken ws = let arg = (ws !! 1) in
+      case head ws of
+        "ASSIGN" -> Assign
+        "BOOL_CONST" -> BoolConst arg
+        "CASE" -> Case
+        "CLASS" -> Class
+        "':'" -> Colon
+        "','" -> Coma
+        "DARROW" -> Darrow
+        "'/;" -> Div
+        "'.'" -> Dot
+        "ELSE" -> Else
+        "EOF" -> Eof
+        "'='" -> Eq
+        "ERROR" -> error arg
+        "ESAC" -> Esac
+        "FI" -> Fi
+        "IF" -> If
+        "IN" -> In
+        "INHERITS" -> Inherits
+        "INT_CONST" -> IntConst arg
+        "ISVOID" -> IsVoid
+        "'{'" -> Lbrace
+        "LE" -> Le
+        "LET" -> Let
+        "LOOP" -> Loop
+        "'('" -> Lparen
+        "'<'" -> Lt
+        "'-'" -> Minus
+        "'*'" -> Mult
+        "'~'" -> Neg
+        "NEW" -> New
+        "NOT" -> Not
+        "OBJECTID" -> ObjectId arg
+        "OF" -> Of
+        "'+'" -> Plus
+        "POOL" -> Pool
+        "'}'" -> Rbrace
+        "')'" -> Rparen
+        "';'" -> Semi
+        "STR_CONST" -> StrConst arg
+        "THEN" -> Then
+        "TYPEID" -> TypeId arg
+        "WHILE" -> While
