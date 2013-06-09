@@ -4,11 +4,11 @@ type Symbol = String
 
 data Program = Program [Class]
 
-data Class = Class
+data Class = Class Symbol Symbol [Feature]
 
-data Feature = Feature
+data Feature = Method Symbol [Formal] Symbol Expression
 
-data Formal = Formal
+data Formal = Formal Symbol Symbol
 
 data Expression =
     Assign Symbol Expression

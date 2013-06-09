@@ -64,6 +64,43 @@ import Hscool.Types.AST
 
 %%
 
+program :: { Program }
+program
+  : classes             { Program (reverse $1) }
+
+classes :: { [Class] }
+classes
+  : class ';'           { [$1] }
+  | classes class       { $2 : $1 }
+
+class :: { Class }
+class
+  : CLASS TYPE '{' features '}'
+                        { Class $2 "Object" (reverse $4) }
+  | CLASS TYPE INHERITS TYPE '{' features '}'
+                        { Class $2 $4 (reverse $6) }
+
+features :: { [Feature] }
+features
+  :                     { [] }
+  | feature ';'         { [$1] }
+  | features feature    { $2 : $1 }
+
+feature :: { Feature }
+feature
+  : ID '(' formals ')' ':' TYPE '{' expr '}'
+                        { Method $1 (reverse $3) $6 $8 }
+
+formals :: { [Formal] }
+formals
+  :                     { [] }
+  | formal ','          { [$1] }
+  | formals formal      { $2 : $1 }
+
+formal :: { Formal }
+formal
+  : ID ':' TYPE         { Formal $1 $3 }
+
 expr :: { Expression }
 expr
   : ID ASSIGN expr      { Assign $1 $3}
