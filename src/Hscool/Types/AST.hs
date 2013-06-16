@@ -78,6 +78,8 @@ instance Show Expression where
         Loop e1 e2 -> printf "#1\n_loop\n%s\n%s"
                       (indent e1) (indent e2)
         Block es -> printf "#1\n_block\n%s" (joinAndIndent es)
+        Let name type_ init e -> printf "#1\n_let\n  %s\n  %s\n%s\n%s"
+                                 name type_ (indent init) (indent e)
         e1 :+ e2 -> printf "#1\n_plus\n%s\n%s" (indent e1) (indent e2)
         e1 :- e2 -> printf "#1\n_minus\n%s\n%s" (indent e1) (indent e2)
         e1 :* e2 -> printf "#1\n_mul\n%s\n%s" (indent e1) (indent e2)
@@ -91,6 +93,7 @@ instance Show Expression where
         StringConst s -> printf "#1\n_string\n  %s" s
         New s -> printf "#1\n_new\n  %s" s
         IsVoid e -> printf "#1\n_isvoid\n%s" (indent e)
+        NoExpr -> printf "#1\n_no_expr"
         Object s -> printf "#1\n_object\n  %s" s
         _ -> error "can't show this expression"
 
