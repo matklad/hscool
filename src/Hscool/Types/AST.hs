@@ -63,8 +63,11 @@ data Expression =
   | Object Symbol
 
 instance Show Expression where
-  show expr = case expr of
-    IntConst s -> printf "#1\n_int\n  %s\n: _no_type" s
+  show = (++ "\n: _no_type") . aux
+    where
+      aux expr = case expr of
+        Assign s e -> printf "#1\n_assign\n  %s\n%s" s (indent e)
+        IntConst s -> printf "#1\n_int\n  %s" s
 
 data Case = Case
           deriving Show
