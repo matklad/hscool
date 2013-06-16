@@ -103,7 +103,11 @@ instance Show Token where
 readTokens :: String -> [Token]
 readTokens = (map readToken) . lines
   where
-    readToken = getToken . words
+    readToken t = let ws = words t in
+      if (ws !! 1) == "STR_CONST"
+      then StrConst $ dropWhile (not . ( == '"')) t
+      else getToken ws
+
     getToken ws =
       let line_number = ws !! 0
           tok_type = ws !! 1
@@ -114,13 +118,14 @@ readTokens = (map readToken) . lines
        else
          case tok_type of
            "ASSIGN" -> Assign
+           "'@'" -> At
            "BOOL_CONST" -> BoolConst arg
            "CASE" -> Case
            "CLASS" -> Class
            "':'" -> Colon
            "','" -> Coma
            "DARROW" -> Darrow
-           "'/;" -> Div
+           "'/'" -> Div
            "'.'" -> Dot
            "ELSE" -> Else
            "EOF" -> Eof
@@ -151,8 +156,7 @@ readTokens = (map readToken) . lines
            "'}'" -> Rbrace
            "')'" -> Rparen
            "';'" -> Semi
-           "STR_CONST" -> StrConst arg
            "THEN" -> Then
            "TYPEID" -> TypeId arg
            "WHILE" -> While
-           x -> error x
+           x -> error ("unhnown Token" ++ show x)
