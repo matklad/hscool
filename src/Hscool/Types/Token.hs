@@ -99,7 +99,7 @@ instance Show Token where
     While -> "WHILE"
 
 readTokens :: String -> [Token]
-readTokens = (map readToken) . lines
+readTokens = (map readToken) . tail . lines
   where
     readToken = getToken . tail . words
     getToken ws = let arg = (ws !! 1) in
@@ -146,3 +146,4 @@ readTokens = (map readToken) . lines
         "THEN" -> Then
         "TYPEID" -> TypeId arg
         "WHILE" -> While
+        x -> error x

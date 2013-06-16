@@ -104,6 +104,7 @@ formal
 expr :: { Expression }
 expr
   : ID ASSIGN expr      { Assign $1 $3}
+  | ID '(' expressions ')' { Dispatch (Object "self") "SELF_TYPE" $1 (reverse $3) }
   | expr '+' expr       { $1 :+ $3 }
   | expr '-' expr       { $1 :- $3 }
   | expr '*' expr       { $1 :* $3 }
@@ -113,8 +114,13 @@ expr
   | expr LE expr        { $1 :<= $3 }
   | expr '=' expr       { $1 := $3}
 
-  | INT           { IntConst $1 }
-  | STR           { StringConst $1 }
+  | INT                 { IntConst $1 }
+  | STR                 { StringConst $1 }
+
+expressions :: { [Expression] }
+  :                     { [] }
+  | expr                { [$1] }
+  | expressions ',' expr { $3 : $1 }
 
 {
 parseError :: [T.Token] -> a
