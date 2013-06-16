@@ -94,8 +94,8 @@ feature
 formals :: { [Formal] }
 formals
   :                     { [] }
-  | formal ','          { [$1] }
-  | formals formal      { $2 : $1 }
+  | formal              { [$1] }
+  | formals ',' formal  { $3 : $1 }
 
 formal :: { Formal }
 formal
