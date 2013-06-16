@@ -3,37 +3,33 @@ module Hscool.Types.AST where
 import Text.Printf (printf)
 
 
-class Syntax a where
-  pretyPrint :: a -> String
-
 type Symbol = String
 
-joinAndIndent :: (Syntax a) => [a] -> String
+joinAndIndent :: (Show a) => [a] -> String
 joinAndIndent = unlines . map indent
 
-indent :: (Syntax a) => a -> String
-indent = init . unlines . map ("  " ++) . lines . pretyPrint
+indent :: (Show a) => a -> String
+indent = init . unlines . map ("  " ++) . lines . show
 
 data Program = Program [Class]
-             deriving Show
 
-instance Syntax Program where
-  pretyPrint (Program cls) = "#1\n_program\n" ++ joinAndIndent cls
+instance Show Program where
+  show (Program cls) = "#1\n_program\n" ++ joinAndIndent cls
+
 
 data Class = Class Symbol Symbol [Feature]
-           deriving Show
 
-instance Syntax Class where
-  pretyPrint (Class name super features) =
+instance Show Class where
+  show (Class name super features) =
     printf format name super (joinAndIndent features)
     where
       format = "#1\n_class\n  %s\n  %s\n  \"file name here\"\n  (\n%s  )"
 
-data Feature = Method Symbol [Formal] Symbol Expression
-             deriving Show
 
-instance Syntax Feature where
-  pretyPrint (Method name formals type_ body) =
+data Feature = Method Symbol [Formal] Symbol Expression
+
+instance Show Feature where
+  show (Method name formals type_ body) =
     printf format name type_ (indent body)
     where
       format = "#1\n_method\n  %s\n  %s\n%s"
@@ -65,10 +61,9 @@ data Expression =
   | IsVoid Expression
   | NoExpr
   | Object Symbol
-  deriving Show
 
-instance Syntax Expression where
-  pretyPrint expr = case expr of
+instance Show Expression where
+  show expr = case expr of
     IntConst s -> printf "#1\n_int\n  %s\n: _no_type" s
 
 data Case = Case
