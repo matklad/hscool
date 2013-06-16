@@ -17,13 +17,13 @@ instance Show Program where
   show (Program cls) = "#1\n_program\n" ++ joinAndIndent cls
 
 
-data Class = Class Symbol Symbol [Feature]
+data Class = Class Symbol Symbol [Feature] String
 
 instance Show Class where
-  show (Class name super features) =
-    printf format name super (joinAndIndent features)
+  show (Class name super features fileName) =
+    printf format name super fileName (joinAndIndent features)
     where
-      format = "#1\n_class\n  %s\n  %s\n  \"file name here\"\n  (\n%s  )"
+      format = "#1\n_class\n  %s\n  %s\n  %s\n  (\n%s  )"
 
 
 data Feature = Method Symbol [Formal] Symbol Expression

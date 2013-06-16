@@ -167,13 +167,14 @@ string2Token s@(ch:_)
 -- Note(matklad): this should be here because I said so.
 main :: IO ()
 main = do
-    [fileName] <- getArgs
-    contents <- readFile fileName
-    printf "#name \"%s\"\n" fileName
-    case runAlex contents (collect []) of
-        Left err     -> putStrLn err
-        Right tokens -> forM_ tokens $ \(line, token) ->
-            printf "#%d %s\n" line (show token)
+    fileNames <- getArgs
+    forM_ fileNames (\fileName -> do
+                       contents <- readFile fileName
+                       printf "#name \"%s\"\n" fileName
+                       case runAlex contents (collect []) of
+                         Left err     -> putStrLn err
+                         Right tokens -> forM_ tokens $ \(line, token) ->
+                           printf "#%d %s\n" line (show token))
   where
     collect :: [(Int, Token)] -> Alex [(Int, Token)]
     collect !acc = do

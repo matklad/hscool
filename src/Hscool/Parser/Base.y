@@ -51,6 +51,7 @@ import Hscool.Types.AST
   THEN      { T.Then }
   TYPE      { T.TypeId $$ }
   WHILE     { T.While }
+  FILE_NAME { T.FileName $$}
 
 %left '.'
 %left '@'
@@ -66,14 +67,22 @@ import Hscool.Types.AST
 
 program :: { Program }
 program
-  : classes             { Program (reverse $1) }
+  : files             { Program ((concat . reverse) $1) }
 
-classes :: { [Class] }
+files :: { [[Class]] }
+files
+  : file              { [$1] }
+  | files file        { $2 : $1 }
+
+file :: { [Class] }
+  : FILE_NAME classes {map (\x -> x $1) (reverse $2)}
+
+classes :: { [String -> Class] }
 classes
   : class ';'           { [$1] }
   | classes class       { $2 : $1 }
 
-class :: { Class }
+class :: { String -> Class }
 class
   : CLASS TYPE '{' features '}'
                         { Class $2 "Object" (reverse $4) }
