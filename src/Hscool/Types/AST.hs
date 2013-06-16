@@ -40,7 +40,8 @@ data Formal = Formal Symbol Symbol
 
 data Expression =
     Assign Symbol Expression
-  | Dispatch Expression Symbol Symbol [Expression]
+  | Dispatch Expression Symbol [Expression]
+  | StaticDispatch Expression Symbol Symbol [Expression]
   | Cond Expression Expression Expression
   | Loop Expression Expression
   | TypeCase Expression [Case]

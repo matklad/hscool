@@ -113,7 +113,7 @@ formal
 expr :: { Expression }
 expr
   : ID ASSIGN expr      { Assign $1 $3}
-  | ID '(' expressions ')' { Dispatch (Object "self") "SELF_TYPE" $1 (reverse $3) }
+  | ID '(' expressions ')' { Dispatch (Object "self") $1 (reverse $3) }
   | expr '+' expr       { $1 :+ $3 }
   | expr '-' expr       { $1 :- $3 }
   | expr '*' expr       { $1 :* $3 }
