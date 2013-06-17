@@ -28,8 +28,8 @@ instance Show Class where
 
 
 data Feature =
-    Method Symbol [Formal] Symbol Expression
-  | Attribute Symbol Symbol Expression
+    Method Symbol [Formal] Symbol Expr
+  | Attribute Symbol Symbol Expr
 
 instance Show Feature where
   show f = case f of
@@ -44,33 +44,33 @@ data Formal = Formal Symbol Symbol
 instance Show Formal where
   show (Formal name type_) = printf "#1\n_formal\n  %s\n  %s\n" name type_
 
-data Expression =
-    Assign Symbol Expression
-  | Dispatch Expression Symbol [Expression]
-  | StaticDispatch Expression Symbol Symbol [Expression]
-  | Cond Expression Expression Expression
-  | Loop Expression Expression
-  | TypeCase Expression [Branch]
-  | Block [Expression]
-  | Let Symbol Symbol Expression Expression
-  | Add Expression Expression
-  | Minus Expression Expression
-  | Mul Expression Expression
-  | Div Expression Expression
-  | Neg Expression
-  | Le Expression Expression
-  | Eq Expression Expression
-  | Leq Expression Expression
-  | Comp Expression
+data Expr =
+    Assign Symbol Expr
+  | Dispatch Expr Symbol [Expr]
+  | StaticDispatch Expr Symbol Symbol [Expr]
+  | Cond Expr Expr Expr
+  | Loop Expr Expr
+  | TypeCase Expr [Branch]
+  | Block [Expr]
+  | Let Symbol Symbol Expr Expr
+  | Add Expr Expr
+  | Minus Expr Expr
+  | Mul Expr Expr
+  | Div Expr Expr
+  | Neg Expr
+  | Le Expr Expr
+  | Eq Expr Expr
+  | Leq Expr Expr
+  | Comp Expr
   | IntConst Symbol
   | StringConst Symbol
   | BoolConst Bool
   | New Symbol
-  | IsVoid Expression
+  | IsVoid Expr
   | NoExpr
   | Object Symbol
 
-instance Show Expression where
+instance Show Expr where
   show = (++ ": _no_type") . aux
     where
       aux expr = case expr of
@@ -107,7 +107,7 @@ instance Show Expression where
         Object s -> printf "#1\n_object\n  %s\n" s
 
 
-data Branch = Branch Symbol Symbol Expression
+data Branch = Branch Symbol Symbol Expr
 
 instance Show Branch where
   show (Branch name type_ e) = printf "#1\n_branch\n  %s\n  %s\n%s"

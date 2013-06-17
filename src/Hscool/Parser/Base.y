@@ -102,7 +102,7 @@ feature
   | decl ';'            { let (name, type_, expr) = $1 in
                              Attribute name type_ expr}
 
-decl :: { Symbol, Symbol, Expression }
+decl :: { Symbol, Symbol, Expr }
   : ID ':' TYPE         {  ($1, $3, NoExpr) }
   | ID ':' TYPE ASSIGN expr
                         { ($1, $3, $5) }
@@ -117,7 +117,7 @@ formal :: { Formal }
 formal
   : ID ':' TYPE         { Formal $1 $3 }
 
-expr :: { Expression }
+expr :: { Expr }
 expr
   : ID ASSIGN expr      { Assign $1 $3}
   | expr '.' ID '(' exprs_coma ')'
@@ -151,16 +151,16 @@ expr
   | STR                 { StringConst $1 }
   | BOOL                { BoolConst ($1 == "true")}
 
-exprs_coma :: { [Expression] }
+exprs_coma :: { [Expr] }
   :                     { [] }
   | expr                { [$1] }
   | exprs_coma ',' expr { $3 : $1 }
 
-exprs_semi :: { [Expression] }
+exprs_semi :: { [Expr] }
   : expr ';'            { [$1] }
   | exprs_semi expr ';' { $2 : $1 }
 
-decls :: { [(Symbol, Symbol, Expression)] }
+decls :: { [(Symbol, Symbol, Expr)] }
   : decl                { [$1] }
   | decls ',' decl      { $3 : $1 }
 
@@ -175,7 +175,7 @@ branches :: { [Branch] }
 parseError :: [T.Token] -> a
 parseError t = error $ "Parse error. Token:\n" ++ (show t)
 
-makeLet :: [(Symbol, Symbol, Expression)] -> Expression -> Expression
+makeLet :: [(Symbol, Symbol, Expr)] -> Expr -> Expr
 makeLet ([(name, type_, ini)]) e = Let name type_ ini e
 makeLet ((name, type_, ini):xs) e = Let name type_ ini (makeLet xs e)
 
