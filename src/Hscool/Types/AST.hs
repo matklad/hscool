@@ -1,8 +1,12 @@
-module Hscool.Types.AST where
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
+module Hscool.Types.AST
+       (UProgram, UClass, UFeature, UExpr, UBranch, Symbol(..), Formal(..)
+       , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..))
+       where
 
 import Text.Printf (printf)
 import Data.List (intercalate)
-
 
 type Symbol = String
 
@@ -12,26 +16,32 @@ joinAndIndent = unlines . map indent
 indent :: (Show a) => a -> String
 indent = intercalate "\n" .  map ("  " ++) . lines . show
 
-data Program = Program [Class]
+data Program a = Program [Class a]
 
-instance Show Program where
+type UProgram = Program ()
+
+instance Show UProgram where
   show (Program cls) = "#1\n_program\n" ++ joinAndIndent cls
 
 
-data Class = Class Symbol Symbol [Feature] String
+data Class a = Class Symbol Symbol [Feature a] String
 
-instance Show Class where
+type UClass = Class ()
+
+instance Show UClass where
   show (Class name super features fileName) =
     printf format name super fileName (joinAndIndent features)
     where
       format = "#1\n_class\n  %s\n  %s\n  %s\n  (\n%s  )\n"
 
 
-data Feature =
-    Method Symbol [Formal] Symbol Expr
-  | Attribute Symbol Symbol Expr
+data Feature a =
+    Method Symbol [Formal] Symbol (Expr a)
+  | Attribute Symbol Symbol (Expr a)
 
-instance Show Feature where
+type UFeature = Feature ()
+
+instance Show UFeature where
   show f = case f of
     Method name formals type_ body ->  printf "#1\n_method\n  %s\n%s  %s\n%s"
                                        name (joinAndIndent formals) type_ (indent body)
@@ -44,36 +54,40 @@ data Formal = Formal Symbol Symbol
 instance Show Formal where
   show (Formal name type_) = printf "#1\n_formal\n  %s\n  %s\n" name type_
 
-data Expr =
-    Assign Symbol Expr
-  | Dispatch Expr Symbol [Expr]
-  | StaticDispatch Expr Symbol Symbol [Expr]
-  | Cond Expr Expr Expr
-  | Loop Expr Expr
-  | TypeCase Expr [Branch]
-  | Block [Expr]
-  | Let Symbol Symbol Expr Expr
-  | Add Expr Expr
-  | Minus Expr Expr
-  | Mul Expr Expr
-  | Div Expr Expr
-  | Neg Expr
-  | Le Expr Expr
-  | Eq Expr Expr
-  | Leq Expr Expr
-  | Comp Expr
+data Expr a = Expr a (Expr' a)
+
+data Expr' a =
+    Assign Symbol (Expr a)
+  | Dispatch (Expr a) Symbol [(Expr a)]
+  | StaticDispatch (Expr a) Symbol Symbol [(Expr a)]
+  | Cond (Expr a) (Expr a) (Expr a)
+  | Loop (Expr a) (Expr a)
+  | TypeCase (Expr a) [Branch a]
+  | Block [(Expr a)]
+  | Let Symbol Symbol (Expr a) (Expr a)
+  | Add (Expr a) (Expr a)
+  | Minus (Expr a) (Expr a)
+  | Mul (Expr a) (Expr a)
+  | Div (Expr a) (Expr a)
+  | Neg (Expr a)
+  | Le (Expr a) (Expr a)
+  | Eq (Expr a) (Expr a)
+  | Leq (Expr a) (Expr a)
+  | Comp (Expr a)
   | IntConst Symbol
   | StringConst Symbol
   | BoolConst Bool
   | New Symbol
-  | IsVoid Expr
+  | IsVoid (Expr a)
   | NoExpr
   | Object Symbol
 
-instance Show Expr where
+type UExpr = Expr ()
+
+instance Show UExpr where
   show = (++ ": _no_type") . aux
     where
-      aux expr = case expr of
+      aux (Expr _ expr) = case expr of
         Assign s e -> printf "#1\n_assign\n  %s\n%s\n" s (indent e)
         Dispatch e s actuals -> printf "#1\n_dispatch\n%s\n  %s\n  (\n%s  )\n"
                                 (indent e) s (joinAndIndent actuals)
@@ -106,9 +120,10 @@ instance Show Expr where
         NoExpr -> printf "#1\n_no_expr\n"
         Object s -> printf "#1\n_object\n  %s\n" s
 
+data Branch a = Branch Symbol Symbol (Expr a)
 
-data Branch = Branch Symbol Symbol Expr
+type UBranch = Branch ()
 
-instance Show Branch where
+instance Show UBranch where
   show (Branch name type_ e) = printf "#1\n_branch\n  %s\n  %s\n%s"
                                name type_ (indent e)

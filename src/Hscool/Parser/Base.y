@@ -65,45 +65,45 @@ import Hscool.Types.AST
 
 %%
 
-program :: { Program }
+program :: { UProgram }
 program
   : files             { Program ((concat . reverse) $1) }
 
-files :: { [[Class]] }
+files :: { [[UClass]] }
 files
   : file              { [$1] }
   | files file        { $2 : $1 }
 
-file :: { [Class] }
+file :: { [UClass] }
   : FILE_NAME classes {map (\x -> x $1) (reverse $2)}
 
-classes :: { [String -> Class] }
+classes :: { [String -> UClass] }
 classes
   : class               { [$1] }
   | classes class       { $2 : $1 }
 
-class :: { String -> Class }
+class :: { String -> UClass }
 class
   : CLASS TYPE '{' features '}' ';'
                         { Class $2 "Object" (reverse $4) }
   | CLASS TYPE INHERITS TYPE '{' features '}' ';'
                         { Class $2 $4 (reverse $6) }
 
-features :: { [Feature] }
+features :: { [UFeature] }
 features
   :                     { [] }
   | feature             { [$1] }
   | features feature    { $2 : $1 }
 
-feature :: { Feature }
+feature :: { UFeature }
 feature
   : ID '(' formals ')' ':' TYPE '{' expr '}' ';'
                         { Method $1 (reverse $3) $6 $8 }
   | decl ';'            { let (name, type_, expr) = $1 in
                              Attribute name type_ expr}
 
-decl :: { Symbol, Symbol, Expr }
-  : ID ':' TYPE         {  ($1, $3, NoExpr) }
+decl :: { Symbol, Symbol, UExpr }
+  : ID ':' TYPE         {  ($1, $3, (Expr () NoExpr)) }
   | ID ':' TYPE ASSIGN expr
                         { ($1, $3, $5) }
 
@@ -117,57 +117,57 @@ formal :: { Formal }
 formal
   : ID ':' TYPE         { Formal $1 $3 }
 
-expr :: { Expr }
+expr :: { UExpr }
 expr
-  : ID ASSIGN expr      { Assign $1 $3}
+  : ID ASSIGN expr      { Expr () (Assign $1 $3)}
   | expr '.' ID '(' exprs_coma ')'
-                        { Dispatch $1 $3 (reverse $5) }
+                        { Expr () (Dispatch $1 $3 (reverse $5)) }
   | expr '@' TYPE '.' ID '(' exprs_coma ')'
-                        { StaticDispatch $1 $3 $5 (reverse $7) }
+                        { Expr () (StaticDispatch $1 $3 $5 (reverse $7)) }
   | ID '(' exprs_coma ')'
-                        { Dispatch (Object "self") $1 (reverse $3) }
+                        { Expr () (Dispatch (Expr () (Object "self")) $1 (reverse $3)) }
   | IF expr THEN expr ELSE expr FI
-                        { Cond $2 $4 $6 }
+                        { Expr () (Cond $2 $4 $6) }
   | WHILE expr LOOP expr POOL
-                        { Loop $2 $4 }
-  | '{' exprs_semi '}'  { Block ( reverse $2)}
+                        { Expr () (Loop $2 $4) }
+  | '{' exprs_semi '}'  { Expr () (Block (reverse $2)) }
   | LET decls IN expr   { makeLet (reverse $2) $4 }
   | CASE expr OF branches ESAC
-                        { TypeCase $2 (reverse $4) }
-  | NEW TYPE            { New $2 }
-  | ISVOID expr         { IsVoid $2 }
-  | expr '+' expr       { Add $1 $3 }
-  | expr '-' expr       { Minus $1 $3 }
-  | expr '*' expr       { Mul $1 $3 }
-  | expr '/' expr       { Div $1 $3 }
-  | '~' expr            { Neg $2 }
-  | expr '<' expr       { Le $1 $3 }
-  | expr LE expr        { Leq $1  $3 }
-  | expr '=' expr       { Eq $1 $3 }
-  | NOT expr            { Comp $2 }
+                        { Expr () (TypeCase $2 (reverse $4)) }
+  | NEW TYPE            { Expr () (New $2) }
+  | ISVOID expr         { Expr () (IsVoid $2) }
+  | expr '+' expr       { Expr () (Add $1 $3) }
+  | expr '-' expr       { Expr () (Minus $1 $3) }
+  | expr '*' expr       { Expr () (Mul $1 $3) }
+  | expr '/' expr       { Expr () (Div $1 $3) }
+  | '~' expr            { Expr () (Neg $2) }
+  | expr '<' expr       { Expr () (Le $1 $3) }
+  | expr LE expr        { Expr () (Leq $1  $3) }
+  | expr '=' expr       { Expr () (Eq $1 $3) }
+  | NOT expr            { Expr () (Comp $2) }
   | '(' expr ')'        { $2 }
-  | ID                  { Object $1 }
-  | INT                 { IntConst $1 }
-  | STR                 { StringConst $1 }
-  | BOOL                { BoolConst ($1 == "true")}
+  | ID                  { Expr () (Object $1) }
+  | INT                 { Expr () (IntConst $1) }
+  | STR                 { Expr () (StringConst $1) }
+  | BOOL                { Expr () (BoolConst ($1 == "true")) }
 
-exprs_coma :: { [Expr] }
+exprs_coma :: { [UExpr] }
   :                     { [] }
   | expr                { [$1] }
   | exprs_coma ',' expr { $3 : $1 }
 
-exprs_semi :: { [Expr] }
+exprs_semi :: { [UExpr] }
   : expr ';'            { [$1] }
   | exprs_semi expr ';' { $2 : $1 }
 
-decls :: { [(Symbol, Symbol, Expr)] }
+decls :: { [(Symbol, Symbol, UExpr)] }
   : decl                { [$1] }
   | decls ',' decl      { $3 : $1 }
 
-branch :: { Branch }
+branch :: { UBranch }
   : ID ':' TYPE DARROW expr ';'
                         { Branch $1 $3 $5}
-branches :: { [Branch] }
+branches :: { [UBranch] }
   : branch                { [$1] }
   | branches branch       { $2 : $1 }
 
@@ -175,9 +175,9 @@ branches :: { [Branch] }
 parseError :: [T.Token] -> a
 parseError t = error $ "Parse error. Token:\n" ++ (show t)
 
-makeLet :: [(Symbol, Symbol, Expr)] -> Expr -> Expr
-makeLet ([(name, type_, ini)]) e = Let name type_ ini e
-makeLet ((name, type_, ini):xs) e = Let name type_ ini (makeLet xs e)
+makeLet :: [(Symbol, Symbol, UExpr)] -> UExpr -> UExpr
+makeLet ([(name, type_, ini)]) e = Expr () (Let name type_ ini e)
+makeLet ((name, type_, ini):xs) e = Expr () (Let name type_ ini (makeLet xs e))
 
 main :: IO ()
 main = getContents >>= putStr . show . parse . T.readTokens
