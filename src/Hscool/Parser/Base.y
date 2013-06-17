@@ -136,14 +136,14 @@ expr
                         { TypeCase $2 (reverse $4) }
   | NEW TYPE            { New $2 }
   | ISVOID expr         { IsVoid $2 }
-  | expr '+' expr       { $1 :+ $3 }
-  | expr '-' expr       { $1 :- $3 }
-  | expr '*' expr       { $1 :* $3 }
-  | expr '/' expr       { $1 :/ $3 }
+  | expr '+' expr       { Add $1 $3 }
+  | expr '-' expr       { Minus $1 $3 }
+  | expr '*' expr       { Mul $1 $3 }
+  | expr '/' expr       { Div $1 $3 }
   | '~' expr            { Neg $2 }
-  | expr '<' expr       { $1 :< $3 }
-  | expr LE expr        { $1 :<= $3 }
-  | expr '=' expr       { $1 := $3 }
+  | expr '<' expr       { Le $1 $3 }
+  | expr LE expr        { Leq $1  $3 }
+  | expr '=' expr       { Eq $1 $3 }
   | NOT expr            { Comp $2 }
   | '(' expr ')'        { $2 }
   | ID                  { Object $1 }

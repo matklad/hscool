@@ -53,14 +53,14 @@ data Expression =
   | TypeCase Expression [Branch]
   | Block [Expression]
   | Let Symbol Symbol Expression Expression
-  | Expression :+ Expression
-  | Expression :- Expression
-  | Expression :* Expression
-  | Expression :/ Expression
+  | Add Expression Expression
+  | Minus Expression Expression
+  | Mul Expression Expression
+  | Div Expression Expression
   | Neg Expression
-  | Expression :< Expression
-  | Expression := Expression
-  | Expression :<= Expression
+  | Le Expression Expression
+  | Eq Expression Expression
+  | Leq Expression Expression
   | Comp Expression
   | IntConst Symbol
   | StringConst Symbol
@@ -89,14 +89,14 @@ instance Show Expression where
         Block es -> printf "#1\n_block\n%s" (joinAndIndent es)
         Let name type_ ini e -> printf "#1\n_let\n  %s\n  %s\n%s\n%s\n"
                                 name type_ (indent ini) (indent e)
-        e1 :+ e2 -> printf "#1\n_plus\n%s\n%s\n" (indent e1) (indent e2)
-        e1 :- e2 -> printf "#1\n_sub\n%s\n%s\n" (indent e1) (indent e2)
-        e1 :* e2 -> printf "#1\n_mul\n%s\n%s\n" (indent e1) (indent e2)
-        e1 :/ e2 -> printf "#1\n_divide\n%s\n%s\n" (indent e1) (indent e2)
+        Add e1 e2 -> printf "#1\n_plus\n%s\n%s\n" (indent e1) (indent e2)
+        Minus e1 e2 -> printf "#1\n_sub\n%s\n%s\n" (indent e1) (indent e2)
+        Mul e1 e2 -> printf "#1\n_mul\n%s\n%s\n" (indent e1) (indent e2)
+        Div e1 e2 -> printf "#1\n_divide\n%s\n%s\n" (indent e1) (indent e2)
         Neg e -> printf "#1\n_neg\n%s\n" (indent e)
-        e1 :< e2 -> printf "#1\n_lt\n%s\n%s\n" (indent e1) (indent e2)
-        e1 := e2 -> printf "#1\n_eq\n%s\n%s\n" (indent e1) (indent e2)
-        e1 :<= e2 -> printf "#1\n_leq\n%s\n%s\n" (indent e1) (indent e2)
+        Le e1 e2 -> printf "#1\n_lt\n%s\n%s\n" (indent e1) (indent e2)
+        Eq e1 e2 -> printf "#1\n_eq\n%s\n%s\n" (indent e1) (indent e2)
+        Leq e1  e2 -> printf "#1\n_leq\n%s\n%s\n" (indent e1) (indent e2)
         Comp e -> printf "#1\n_comp\n%s\n" (indent e)
         IntConst s -> printf "#1\n_int\n  %s\n" s
         StringConst s -> printf "#1\n_string\n  %s\n" s
