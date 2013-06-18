@@ -7,6 +7,9 @@ module Hscool.Types.AST
 
 import Text.Printf (printf)
 import Data.List (intercalate)
+import Control.Applicative ((<$>))
+
+import Data.Attoparsec (many1, Parser)
 
 type Symbol = String
 
@@ -127,3 +130,11 @@ type UBranch = Branch ()
 instance Show UBranch where
   show (Branch name type_ e) = printf "#1\n_branch\n  %s\n  %s\n%s"
                                name type_ (indent e)
+
+uProgram :: Parser UProgram
+uProgram = Program <$> many1 uClass
+
+uClass :: Parser UClass
+uClass = undefined
+
+parseUProgram = undefined

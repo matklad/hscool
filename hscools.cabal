@@ -37,6 +37,7 @@ Executable parser
   Build-depends:     base
                    , array
                    , containers
+                   , attoparsec
 
   Build-tools:       alex
                    , happy
