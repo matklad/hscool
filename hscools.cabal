@@ -38,6 +38,7 @@ Executable parser
                    , array
                    , containers
                    , attoparsec
+                   , bytestring
 
   Build-tools:       alex
                    , happy

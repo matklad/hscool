@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE OverloadedStrings    #-}
 module Hscool.Types.AST
        (UProgram, UClass, UFeature, UExpr, UBranch, Symbol(..), Formal(..)
        , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..))
@@ -7,9 +8,13 @@ module Hscool.Types.AST
 
 import Text.Printf (printf)
 import Data.List (intercalate)
+import Data.Attoparsec.Char8 (Parser, many1, many', space, string, skipWhile,
+                              skipSpace, notInClass, endOfLine, letter_ascii,
+                              char, notChar)
+import Data.ByteString.Char8 (ByteString, unpack)
+
 import Control.Applicative ((<$>))
 
-import Data.Attoparsec (many1, Parser)
 
 type Symbol = String
 
@@ -132,9 +137,45 @@ instance Show UBranch where
                                name type_ (indent e)
 
 uProgram :: Parser UProgram
-uProgram = Program <$> many1 uClass
+uProgram = header "_program" >> (Program <$> many1 uClass)
 
 uClass :: Parser UClass
-uClass = undefined
+uClass = do
+  header "_class"
+  name <- line symbol
+  super <- line symbol
+  file <- line stringLiteral
+  line $ string "("
+  features <- many' uFeature
+  line $ string ")"
+  return $ Class name super features file
+
+uFeature = undefined
+
+line :: Parser a -> Parser a
+line p = do
+  skipSpace
+  r <- p
+  endOfLine
+  return r
+
+
+header :: ByteString -> Parser ()
+header h = line (lineNumber) >> line (string h) >> return ()
+
+lineNumber :: Parser ByteString
+lineNumber = string "#1"
+
+symbol :: Parser String
+symbol = many' letter_ascii
+
+isAlphanum = undefined
+
+stringLiteral :: Parser String
+stringLiteral = do
+  char '\n'
+  s <- many' (notChar '\n')
+  char '\n'
+  return s
 
 parseUProgram = undefined
