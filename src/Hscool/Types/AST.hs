@@ -10,10 +10,10 @@ import Text.Printf (printf)
 import Data.List (intercalate)
 import Data.Attoparsec.Char8 (Parser, many1, many', space, string, skipWhile,
                               skipSpace, notInClass, endOfLine, letter_ascii,
-                              char, notChar)
+                              char, notChar, choice)
 import Data.ByteString.Char8 (ByteString, unpack)
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<|>), (<*>))
 
 
 type Symbol = String
@@ -142,23 +142,86 @@ uProgram = header "_program" >> (Program <$> many1 uClass)
 uClass :: Parser UClass
 uClass = do
   header "_class"
-  name <- line symbol
-  super <- line symbol
-  file <- line stringLiteral
+  name <- symbol
+  super <-  symbol
+  file <- stringLiteral
   line $ string "("
   features <- many' uFeature
   line $ string ")"
   return $ Class name super features file
 
-uFeature = undefined
+uFeature :: Parser UFeature
+uFeature = method <|> attribute
+  where
+    method = header "_method" >>
+             (Method <$> symbol <*> (many' formal) <*> symbol <*> uExpr)
+    attribute = header "_attr" >>
+                (Attribute <$> symbol <*> symbol <*> uExpr)
 
+formal = header "_formal" >>
+         (Formal <$> symbol <*> symbol)
+
+uExpr = do
+        e <- choice [assign, dispatch, staticDispatch, cond, loop, typeCase,
+                     block, let_, add, minus, mul, div, neg, le, eq, leq, comp,
+                     intConst, stringConst, boolConst, new, isVoid, noExpr, object]
+        line $ string ": _no_type"
+        return $ Expr () e
+  where
+    assign = header "_assign" >>
+             Assign <$> symbol <*> uExpr
+    dispatch = header "_dispatch" >>
+               Dispatch <$> uExpr <*> symbol <*> (many' uExpr)
+    staticDispatch = header "_static_dispatch" >>
+                     StaticDispatch <$> uExpr <*> symbol <*> symbol <*> (many' uExpr)
+    cond = header "_cond" >>
+           Cond <$> uExpr <*> uExpr <*> uExpr
+    loop = header "_loop" >>
+           Loop <$> uExpr <*> uExpr
+    typeCase = header "_typcase" >>
+                TypeCase <$> uExpr <*> many1 uBranch
+    block = header "_block" >>
+            Block <$> many' uExpr
+    let_ = header "_let" >>
+           Let <$> symbol <*> symbol <*> uExpr <*> uExpr
+    add = header "_plus" >>
+          Add <$> uExpr <*> uExpr
+    minus = header "_sub" >>
+            Minus <$> uExpr <*> uExpr
+    mul = header "_mul" >>
+          Mul <$> uExpr <*> uExpr
+    div = header "_divide" >>
+          Div <$> uExpr <*> uExpr
+    neg = header "_neg" >>
+          Neg <$> uExpr
+    le = header "_lt" >>
+         Le <$> uExpr <*> uExpr
+    eq = header "_eq" >>
+         Eq <$> uExpr <*> uExpr
+    leq = header "_leq" >>
+          Leq <$> uExpr <*> uExpr
+    comp = header "_comp" >>
+           Comp <$> uExpr
+    intConst = header "_int" >>
+               IntConst <$> symbol
+    stringConst = header "_string" >>
+                  StringConst <$> symbol
+    boolConst = header "_bool" >>
+                BoolConst <$> bool
+    new = header "_new" >>
+          New <$> symbol
+    isVoid = header "_isvoid" >>
+             IsVoid <$> uExpr
+    noExpr = header "_no_expr" >>
+             return NoExpr
+    object = header "_object" >>
+             Object <$> symbol
+
+uBranch = undefined
+
+bool = undefined
 line :: Parser a -> Parser a
-line p = do
-  skipSpace
-  r <- p
-  endOfLine
-  return r
-
+line p = wrap skipSpace p endOfLine
 
 header :: ByteString -> Parser ()
 header h = line (lineNumber) >> line (string h) >> return ()
@@ -167,15 +230,15 @@ lineNumber :: Parser ByteString
 lineNumber = string "#1"
 
 symbol :: Parser String
-symbol = many' letter_ascii
-
-isAlphanum = undefined
+symbol = line $ many' letter_ascii
 
 stringLiteral :: Parser String
-stringLiteral = do
-  char '\n'
-  s <- many' (notChar '\n')
-  char '\n'
-  return s
+stringLiteral = line $ wrap (char '"') (many' (notChar '"')) (char '"')
+
+wrap p1 p2 p3 = do
+  p1
+  r <- p2
+  p3
+  return r
 
 parseUProgram = undefined
