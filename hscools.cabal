@@ -42,3 +42,19 @@ Executable parser
 
   Build-tools:       alex
                    , happy
+
+Executable semant
+  Main-is:           Hscool/Semant/Main.hs
+  other-modules:     Hscool.Lexer.Base
+                   , Hscool.Parser.Base
+                   , Hscool.Types.AST      
+
+  hs-source-dirs:    src
+
+  Build-depends:     base
+                   , array
+                   , containers
+
+
+
+
