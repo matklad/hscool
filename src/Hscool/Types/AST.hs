@@ -3,14 +3,16 @@
 {-# LANGUAGE OverloadedStrings    #-}
 module Hscool.Types.AST
        (UProgram, UClass, UFeature, UExpr, UBranch, Symbol(..), Formal(..)
-       , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..))
+       , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..),
+         parseUProgram)
        where
 
 import Text.Printf (printf)
 import Data.List (intercalate)
 import Data.Attoparsec.Char8 (Parser, many1, many', space, string, skipWhile,
                               skipSpace, notInClass, endOfLine, letter_ascii,
-                              char, notChar, choice)
+                              char, notChar, anyChar, choice, parse,
+                              IResult(..), parseOnly)
 import Data.ByteString.Char8 (ByteString, unpack)
 
 import Control.Applicative ((<$>), (<|>), (<*>))
@@ -145,10 +147,13 @@ uClass = do
   name <- symbol
   super <-  symbol
   file <- stringLiteral
-  line $ string "("
+  op
   features <- many' uFeature
-  line $ string ")"
+  cp
   return $ Class name super features file
+
+op = line $ string "("
+cp = line $ string ")"
 
 uFeature :: Parser UFeature
 uFeature = method <|> attribute
@@ -171,9 +176,10 @@ uExpr = do
     assign = header "_assign" >>
              Assign <$> symbol <*> uExpr
     dispatch = header "_dispatch" >>
-               Dispatch <$> uExpr <*> symbol <*> (many' uExpr)
+               Dispatch <$> uExpr <*> symbol <*> wrap op (many' uExpr) cp
     staticDispatch = header "_static_dispatch" >>
-                     StaticDispatch <$> uExpr <*> symbol <*> symbol <*> (many' uExpr)
+                     StaticDispatch <$> uExpr <*> symbol <*> symbol
+                     <*> wrap op (many' uExpr) cp
     cond = header "_cond" >>
            Cond <$> uExpr <*> uExpr <*> uExpr
     loop = header "_loop" >>
@@ -207,7 +213,7 @@ uExpr = do
     stringConst = header "_string" >>
                   StringConst <$> symbol
     boolConst = header "_bool" >>
-                BoolConst <$> bool
+                BoolConst <$> ((== "1") <$> symbol)
     new = header "_new" >>
           New <$> symbol
     isVoid = header "_isvoid" >>
@@ -217,9 +223,9 @@ uExpr = do
     object = header "_object" >>
              Object <$> symbol
 
-uBranch = undefined
+uBranch :: Parser UBranch
+uBranch = header "_branch" >> Branch <$> symbol <*> symbol <*> uExpr
 
-bool = undefined
 line :: Parser a -> Parser a
 line p = wrap skipSpace p endOfLine
 
@@ -230,10 +236,10 @@ lineNumber :: Parser ByteString
 lineNumber = string "#1"
 
 symbol :: Parser String
-symbol = line $ many' letter_ascii
+symbol = line $ many' (notChar '\n')
 
 stringLiteral :: Parser String
-stringLiteral = line $ wrap (char '"') (many' (notChar '"')) (char '"')
+stringLiteral = line $ many1 $ notChar '\n'
 
 wrap p1 p2 p3 = do
   p1
@@ -241,4 +247,10 @@ wrap p1 p2 p3 = do
   p3
   return r
 
-parseUProgram = undefined
+--parseUProgram :: ByteString -> UProgram
+-- parseUProgram input = case parse uProgram input of
+--   Fail t cs s -> error (s ++ "\n\n" ++ (unlines cs))
+--   Partial _ -> error "partial result"
+--   Done t r -> r
+parseUProgram input = case parseOnly uProgram input of Right r -> r
+--parseUProgram  = parse uProgram
