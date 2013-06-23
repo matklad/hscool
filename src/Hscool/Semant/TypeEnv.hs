@@ -1,4 +1,4 @@
-module Hscool.Semant.TypeEnv (getTypeEnv, getClass, join, isSubtype, TypeEnv) where
+module Hscool.Semant.TypeEnv (getTypeEnv, getClass, join, isSubtype, TypeEnv, object) where
 import           Control.Applicative ((<$>))
 import           Control.Monad       (when)
 import           Data.List           (nub, (\\))
