@@ -40,6 +40,12 @@ instance Show a => Show (Program a) where
 
 data Class a = Class Symbol Symbol [Feature a] String
 
+instance Eq (Class a) where
+  (Class n1 _ _ _) == (Class n2 _ _ _) = n1 == n2
+
+instance Ord (Class a) where
+  compare (Class n1 _ _ _) (Class n2 _ _ _) = compare n1 n2
+
 type UClass = Class NT
 type TClass = Class String
 

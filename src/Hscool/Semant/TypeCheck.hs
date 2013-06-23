@@ -1,5 +1,4 @@
 module Hscool.Semant.TypeCheck where
-
 import           Hscool.Semant.TypeEnv
 import           Hscool.Types.AST
 

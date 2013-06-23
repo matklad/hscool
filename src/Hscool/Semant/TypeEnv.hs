@@ -1,27 +1,33 @@
-module Hscool.Semant.TypeEnv (getTypeEnv, join, isSubtype, TypeEnv) where
+module Hscool.Semant.TypeEnv (getTypeEnv, getClass, join, isSubtype, TypeEnv) where
 import           Control.Applicative ((<$>))
+import           Control.Monad       (when)
+import           Data.List           (nub, (\\))
 import qualified Data.Map            as M
+import           Hscool.Types.AST
 
-data TypeEnv = TypeEnv (M.Map String (String, [String]))
+data TypeEnv = TypeEnv (M.Map String (String, [String], UClass))
   deriving Show
 
 
-getTypeEnv :: [(String, String)] -> Either String TypeEnv
-getTypeEnv cs = TypeEnv <$> foldl addOne (Right $ M.fromList [(c, (s, [])) | (c, s) <- cs]) cs
+getTypeEnv :: [UClass] -> Either String TypeEnv
+getTypeEnv cs = do
+  cs' <- simpleCheck cs
+  TypeEnv <$> foldl addOne
+                    (Right $ M.fromList [(name, (super, [], c)) | c@(Class name super _ _) <- cs'])
+                    cs'
   where
-    addOne eitherM (cls, super) = do
-      if super `elem` ["Int", "Bool", "String", "SELF_TYPE"]
-        then Left $ "Can't inherit from " ++ super
-        else return ()
+    addOne eitherM (Class name super _ _) = do
+      when (super `elem` ["Int", "Bool", "String", "SELF_TYPE"])
+           $ Left ("Can't inherit from " ++ super)
 
-      if super == cls
-        then Left $ "Can't inherit from self: " ++ cls
-        else return ()
+
+      when (super == name)
+           $ Left $ "Can't inherit from self: " ++ name
 
       m <- eitherM
-      return $ M.adjust (\(x, ls) -> (x, cls:ls)) super m
+      return $ M.adjust (\(x, ls, c) -> (x, name:ls, c)) super m
 
-join:: TypeEnv -> [String] -> String
+join :: TypeEnv -> [String] -> String
 join env@(TypeEnv m) ts = let join' = join env
                               isSubtype' = isSubtype env
   in case ts of
@@ -30,16 +36,36 @@ join env@(TypeEnv m) ts = let join' = join env
     [a, b] -> case (isSubtype' a b, isSubtype' b a) of
       (True, False) -> b
       (False, True) -> a
-      (False, False) -> let as = fst $ m M.! a in
+      (False, False) -> let (as, _, _) =  m M.! a in
         join' [as, b]
     (t:ts') -> join' [t, join' ts']
 
-isSubtype:: TypeEnv -> String -> String -> Bool
-isSubtype env@(TypeEnv m) t s = if t == s
-  then True
-  else foldl (||) True $ map (isSubtype env t) (snd $ m M.! s)
+isSubtype :: TypeEnv -> String -> String -> Bool
+isSubtype env@(TypeEnv m) t s = (t == s) ||
+  foldl (||) True (map (isSubtype env t) (let (_,ls,_) = m M.! s in ls))
+
+getClass :: TypeEnv -> String -> UClass
+getClass (TypeEnv m) name = let (_,_,c) = m M.! name in c
 
 
+simpleCheck :: [UClass] -> Either String [UClass]
+simpleCheck cls =
+  case cls' \\ nub cls' of
+    [] -> Right cls'
+    cs -> Left $ "Class redeclaration: " ++ show [name | (Class name _ _ _)<- cs]
+  where
+    cls' = buildin ++ cls
 
+object :: UClass
+object = Class "Object" "_" [] "_"
+io :: UClass
+io = Class "IO" "Object" [] "_"
+int :: UClass
+int = Class "Int" "_" [] "_"
+string :: UClass
+string = Class "String" "_" [] "_"
+bool :: UClass
+bool = Class "Bool" "_" [] "_"
 
-
+buildin :: [UClass]
+buildin = [object, io, int, string, bool]
