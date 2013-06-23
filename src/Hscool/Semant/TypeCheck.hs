@@ -51,4 +51,17 @@ getMethods env c@(Class _ super _ _) = if c == object
                 Just x -> Left $ "wrong method signature in subclass: " ++ x
 
 typeCheckFeature :: TypeEnv -> TypeMap String -> TypeMap [String] -> UFeature -> Either String TFeature
-typeCheckFeature = undefined
+typeCheckFeature env attrs methods feature = case feature of
+        Method name formals type_ expr -> let expr'@(Expr t _) = typeCheckExpr env expr in
+            if isSubtype' t type_ 
+            then return $ Method name formals type_ expr'
+            else Left $ "Method body has wrong return type: " ++ name
+        Attribute name type_ expr -> let expr'@(Expr t _) = typeCheckExpr env expr in  
+            if isSubtype' t type_ 
+            then return $ Attribute name type_ expr'
+            else Left $ "Attribute initialization has wrong type: " ++ name
+    where
+        isSubtype' = isSubtype env
+
+typeCheckExpr :: TypeEnv -> UExpr -> TExpr
+typeCheckExpr = undefined
