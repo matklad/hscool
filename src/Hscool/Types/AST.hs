@@ -14,7 +14,7 @@ import           Data.ByteString.Char8 (ByteString)
 import           Data.List             (intercalate)
 import           Text.Printf           (printf)
 
-import           Control.Applicative   ((<$>), (<*>), (<|>))
+import           Control.Applicative   (Applicative, (<$>), (<*>), (<|>), (*>), (<*))
 import           Control.Monad         (void)
 
 
@@ -253,12 +253,9 @@ symbol = line $ many' (notChar '\n')
 stringLiteral :: Parser String
 stringLiteral = line $ many1 $ notChar '\n'
 
-wrap :: Monad m => m a -> m b -> m a -> m b
-wrap p1 p2 p3 = do
-  p1
-  r <- p2
-  p3
-  return r
+
+wrap :: Parser a -> Parser b -> Parser c -> Parser b
+wrap p1 p2 p3 = (p1 *> p2) <* p3
 
 parseUProgram :: ByteString -> UProgram
 parseUProgram input = case parseOnly uProgram input of Right r -> r
