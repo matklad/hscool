@@ -48,7 +48,8 @@ Executable semant
   other-modules:     Hscool.Lexer.Base
                    , Hscool.Parser.Base
                    , Hscool.Types.AST    
-                   , Hscool.Semant.TypeEnv  
+                   , Hscool.Semant.TypeEnv
+                   , Hscool.Semant.TypeCheck
 
   hs-source-dirs:    src
 

@@ -2,6 +2,7 @@ module Main where
 import qualified Data.ByteString       as B
 import           Data.List             (nub, (\\))
 import           Hscool.Semant.TypeEnv
+import           Hscool.Semant.TypeCheck
 import           Hscool.Types.AST
 
 
@@ -10,11 +11,14 @@ main = do
   input <- B.getContents
   let program =  parseUProgram input
   let types = getTypes program
-  case simpleCheck types of
-    Left err -> print err
-    Right types' -> do
-      let typeEnv = getTypeEnv types'
-      putStr $ show typeEnv
+  let result = do
+      types' <- simpleCheck types
+      typeEnv <- getTypeEnv types'
+      typeCheck typeEnv program
+      
+  case result of
+    Left msg -> print $ "Error: " ++ msg
+    Right r -> print r
 
 getTypes :: UProgram -> [(String, String)]
 getTypes (Program cs) = map (\(Class name super _ _) -> (name, super)) cs

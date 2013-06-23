@@ -1,4 +1,4 @@
-module Hscool.Semant.TypeEnv (getTypeEnv, join, isSubtype) where
+module Hscool.Semant.TypeEnv (getTypeEnv, join, isSubtype, TypeEnv) where
 import           Control.Applicative ((<$>))
 import qualified Data.Map            as M
 
