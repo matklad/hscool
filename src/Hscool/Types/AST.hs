@@ -1,21 +1,21 @@
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Hscool.Types.AST
-       (UProgram, UClass, UFeature, UExpr, UBranch, Symbol(..), Formal(..)
+       (UProgram, UClass, UFeature, UExpr, UBranch, Symbol, Formal(..)
+       , TProgram, TClass, TFeature, TExpr, TBranch
        , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..),
          parseUProgram)
        where
 
-import Text.Printf (printf)
-import Data.List (intercalate)
-import Data.Attoparsec.Char8 (Parser, many1, many', space, string, skipWhile,
-                              skipSpace, notInClass, endOfLine, letter_ascii,
-                              char, notChar, anyChar, choice, parse,
-                              IResult(..), parseOnly)
-import Data.ByteString.Char8 (ByteString, unpack)
+import           Data.Attoparsec.Char8 (Parser, choice, endOfLine, many', many1,
+                                        notChar, parseOnly, skipSpace, string)
+import           Data.ByteString.Char8 (ByteString)
+import           Data.List             (intercalate)
+import           Text.Printf           (printf)
 
-import Control.Applicative ((<$>), (<|>), (<*>))
+import           Control.Applicative   ((<$>), (<*>), (<|>))
+import           Control.Monad         (void)
 
 
 type Symbol = String
@@ -29,6 +29,7 @@ indent = intercalate "\n" .  map ("  " ++) . lines . show
 data Program a = Program [Class a]
 
 type UProgram = Program ()
+type TProgram = Program String
 
 instance Show UProgram where
   show (Program cls) = "#1\n_program\n" ++ joinAndIndent cls
@@ -37,6 +38,7 @@ instance Show UProgram where
 data Class a = Class Symbol Symbol [Feature a] String
 
 type UClass = Class ()
+type TClass = Class String
 
 instance Show UClass where
   show (Class name super features fileName) =
@@ -50,13 +52,14 @@ data Feature a =
   | Attribute Symbol Symbol (Expr a)
 
 type UFeature = Feature ()
+type TFeature = Feature String
 
 instance Show UFeature where
   show f = case f of
     Method name formals type_ body ->  printf "#1\n_method\n  %s\n%s  %s\n%s"
                                        name (joinAndIndent formals) type_ (indent body)
-    Attribute name type_ init -> printf "#1\n_attr\n  %s\n  %s\n%s"
-                                 name type_ (indent init)
+    Attribute name type_ init_ -> printf "#1\n_attr\n  %s\n  %s\n%s"
+                                 name type_ (indent init_)
 
 
 data Formal = Formal Symbol Symbol
@@ -68,12 +71,12 @@ data Expr a = Expr a (Expr' a)
 
 data Expr' a =
     Assign Symbol (Expr a)
-  | Dispatch (Expr a) Symbol [(Expr a)]
-  | StaticDispatch (Expr a) Symbol Symbol [(Expr a)]
+  | Dispatch (Expr a) Symbol [Expr a]
+  | StaticDispatch (Expr a) Symbol Symbol [Expr a]
   | Cond (Expr a) (Expr a) (Expr a)
   | Loop (Expr a) (Expr a)
   | TypeCase (Expr a) [Branch a]
-  | Block [(Expr a)]
+  | Block [Expr a]
   | Let Symbol Symbol (Expr a) (Expr a)
   | Add (Expr a) (Expr a)
   | Minus (Expr a) (Expr a)
@@ -93,6 +96,7 @@ data Expr' a =
   | Object Symbol
 
 type UExpr = Expr ()
+type TExpr = Expr String
 
 instance Show UExpr where
   show = (++ ": _no_type") . aux
@@ -133,6 +137,7 @@ instance Show UExpr where
 data Branch a = Branch Symbol Symbol (Expr a)
 
 type UBranch = Branch ()
+type TBranch = Branch String
 
 instance Show UBranch where
   show (Branch name type_ e) = printf "#1\n_branch\n  %s\n  %s\n%s"
@@ -152,23 +157,27 @@ uClass = do
   cp
   return $ Class name super features file
 
+op :: Parser ByteString
 op = line $ string "("
+cp :: Parser ByteString
 cp = line $ string ")"
 
 uFeature :: Parser UFeature
 uFeature = method <|> attribute
   where
     method = header "_method" >>
-             (Method <$> symbol <*> (many' formal) <*> symbol <*> uExpr)
+             (Method <$> symbol <*> many' formal <*> symbol <*> uExpr)
     attribute = header "_attr" >>
                 (Attribute <$> symbol <*> symbol <*> uExpr)
 
+formal :: Parser Formal
 formal = header "_formal" >>
          (Formal <$> symbol <*> symbol)
 
+uExpr :: Parser UExpr
 uExpr = do
         e <- choice [assign, dispatch, staticDispatch, cond, loop, typeCase,
-                     block, let_, add, minus, mul, div, neg, le, eq, leq, comp,
+                     block, let_, add, minus, mul, divide, neg, le, eq, leq, comp,
                      intConst, stringConst, boolConst, new, isVoid, noExpr, object]
         line $ string ": _no_type"
         return $ Expr () e
@@ -196,7 +205,7 @@ uExpr = do
             Minus <$> uExpr <*> uExpr
     mul = header "_mul" >>
           Mul <$> uExpr <*> uExpr
-    div = header "_divide" >>
+    divide = header "_divide" >>
           Div <$> uExpr <*> uExpr
     neg = header "_neg" >>
           Neg <$> uExpr
@@ -230,7 +239,7 @@ line :: Parser a -> Parser a
 line p = wrap skipSpace p endOfLine
 
 header :: ByteString -> Parser ()
-header h = line (lineNumber) >> line (string h) >> return ()
+header h = void (line lineNumber >> line (string h))
 
 lineNumber :: Parser ByteString
 lineNumber = string "#1"
@@ -241,16 +250,13 @@ symbol = line $ many' (notChar '\n')
 stringLiteral :: Parser String
 stringLiteral = line $ many1 $ notChar '\n'
 
+wrap :: Monad m => m a -> m b -> m a -> m b
 wrap p1 p2 p3 = do
   p1
   r <- p2
   p3
   return r
 
---parseUProgram :: ByteString -> UProgram
--- parseUProgram input = case parse uProgram input of
---   Fail t cs s -> error (s ++ "\n\n" ++ (unlines cs))
---   Partial _ -> error "partial result"
---   Done t r -> r
+parseUProgram :: ByteString -> UProgram
 parseUProgram input = case parseOnly uProgram input of Right r -> r
---parseUProgram  = parse uProgram
+
