@@ -26,13 +26,13 @@ join env@(TypeEnv m) ts = let join' = join env
                               isSubtype' = isSubtype env
   in case ts of
     [] -> error "empty join"
-    [t] -> error "one join"
+    [_] -> error "one join"
     [a, b] -> case (isSubtype' a b, isSubtype' b a) of
       (True, False) -> b
       (False, True) -> a
       (False, False) -> let as = fst $ m M.! a in
         join' [as, b]
-    (t:ts) -> join' [t, join' ts]
+    (t:ts') -> join' [t, join' ts']
 
 isSubtype:: TypeEnv -> String -> String -> Bool
 isSubtype env@(TypeEnv m) t s = if t == s
