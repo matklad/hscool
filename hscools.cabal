@@ -47,7 +47,8 @@ Executable semant
   Main-is:           Hscool/Semant/Main.hs
   other-modules:     Hscool.Lexer.Base
                    , Hscool.Parser.Base
-                   , Hscool.Types.AST      
+                   , Hscool.Types.AST    
+                   , Hscool.Semant.TypeEnv  
 
   hs-source-dirs:    src
 
