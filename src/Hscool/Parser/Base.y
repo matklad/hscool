@@ -103,7 +103,7 @@ feature
                              Attribute name type_ expr}
 
 decl :: { Symbol, Symbol, UExpr }
-  : ID ':' TYPE         {  ($1, $3, (Expr () NoExpr)) }
+  : ID ':' TYPE         {  ($1, $3, (Expr NT NoExpr)) }
   | ID ':' TYPE ASSIGN expr
                         { ($1, $3, $5) }
 
@@ -119,37 +119,37 @@ formal
 
 expr :: { UExpr }
 expr
-  : ID ASSIGN expr      { Expr () (Assign $1 $3)}
+  : ID ASSIGN expr      { Expr NT (Assign $1 $3)}
   | expr '.' ID '(' exprs_coma ')'
-                        { Expr () (Dispatch $1 $3 (reverse $5)) }
+                        { Expr NT (Dispatch $1 $3 (reverse $5)) }
   | expr '@' TYPE '.' ID '(' exprs_coma ')'
-                        { Expr () (StaticDispatch $1 $3 $5 (reverse $7)) }
+                        { Expr NT (StaticDispatch $1 $3 $5 (reverse $7)) }
   | ID '(' exprs_coma ')'
-                        { Expr () (Dispatch (Expr () (Object "self")) $1 (reverse $3)) }
+                        { Expr NT (Dispatch (Expr NT (Object "self")) $1 (reverse $3)) }
   | IF expr THEN expr ELSE expr FI
-                        { Expr () (Cond $2 $4 $6) }
+                        { Expr NT (Cond $2 $4 $6) }
   | WHILE expr LOOP expr POOL
-                        { Expr () (Loop $2 $4) }
-  | '{' exprs_semi '}'  { Expr () (Block (reverse $2)) }
+                        { Expr NT (Loop $2 $4) }
+  | '{' exprs_semi '}'  { Expr NT (Block (reverse $2)) }
   | LET decls IN expr   { makeLet (reverse $2) $4 }
   | CASE expr OF branches ESAC
-                        { Expr () (TypeCase $2 (reverse $4)) }
-  | NEW TYPE            { Expr () (New $2) }
-  | ISVOID expr         { Expr () (IsVoid $2) }
-  | expr '+' expr       { Expr () (Add $1 $3) }
-  | expr '-' expr       { Expr () (Minus $1 $3) }
-  | expr '*' expr       { Expr () (Mul $1 $3) }
-  | expr '/' expr       { Expr () (Div $1 $3) }
-  | '~' expr            { Expr () (Neg $2) }
-  | expr '<' expr       { Expr () (Le $1 $3) }
-  | expr LE expr        { Expr () (Leq $1  $3) }
-  | expr '=' expr       { Expr () (Eq $1 $3) }
-  | NOT expr            { Expr () (Comp $2) }
+                        { Expr NT (TypeCase $2 (reverse $4)) }
+  | NEW TYPE            { Expr NT (New $2) }
+  | ISVOID expr         { Expr NT (IsVoid $2) }
+  | expr '+' expr       { Expr NT (Add $1 $3) }
+  | expr '-' expr       { Expr NT (Minus $1 $3) }
+  | expr '*' expr       { Expr NT (Mul $1 $3) }
+  | expr '/' expr       { Expr NT (Div $1 $3) }
+  | '~' expr            { Expr NT (Neg $2) }
+  | expr '<' expr       { Expr NT (Le $1 $3) }
+  | expr LE expr        { Expr NT (Leq $1  $3) }
+  | expr '=' expr       { Expr NT (Eq $1 $3) }
+  | NOT expr            { Expr NT (Comp $2) }
   | '(' expr ')'        { $2 }
-  | ID                  { Expr () (Object $1) }
-  | INT                 { Expr () (IntConst $1) }
-  | STR                 { Expr () (StringConst $1) }
-  | BOOL                { Expr () (BoolConst ($1 == "true")) }
+  | ID                  { Expr NT (Object $1) }
+  | INT                 { Expr NT (IntConst $1) }
+  | STR                 { Expr NT (StringConst $1) }
+  | BOOL                { Expr NT (BoolConst ($1 == "true")) }
 
 exprs_coma :: { [UExpr] }
   :                     { [] }
@@ -176,8 +176,8 @@ parseError :: [T.Token] -> a
 parseError t = error $ "Parse error. Token:\n" ++ (show t)
 
 makeLet :: [(Symbol, Symbol, UExpr)] -> UExpr -> UExpr
-makeLet ([(name, type_, ini)]) e = Expr () (Let name type_ ini e)
-makeLet ((name, type_, ini):xs) e = Expr () (Let name type_ ini (makeLet xs e))
+makeLet ([(name, type_, ini)]) e = Expr NT (Let name type_ ini e)
+makeLet ((name, type_, ini):xs) e = Expr NT (Let name type_ ini (makeLet xs e))
 
 main :: IO ()
 main = getContents >>= putStr . show . parse . T.readTokens
