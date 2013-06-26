@@ -14,7 +14,8 @@ import           Data.ByteString.Char8 (ByteString)
 import           Data.List             (intercalate)
 import           Text.Printf           (printf)
 
-import           Control.Applicative   (Applicative, (<$>), (<*>), (<|>), (*>), (<*))
+import           Control.Applicative   (Applicative, (*>), (<$>), (<*), (<*>),
+                                        (<|>))
 import           Control.Monad         (void)
 
 
@@ -265,4 +266,3 @@ wrap p1 p2 p3 = (p1 *> p2) <* p3
 
 parseUProgram :: ByteString -> UProgram
 parseUProgram input = case parseOnly uProgram input of Right r -> r
-

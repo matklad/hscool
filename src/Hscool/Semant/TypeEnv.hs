@@ -17,15 +17,15 @@ getTypeEnv cs = do
                     cs'
   where
     addOne eitherM (Class name super _ _) = do
-      when (super `elem` ["Int", "Bool", "String", "SELF_TYPE"])
-           $ Left ("Can't inherit from " ++ super)
+        when (super `elem` ["Int", "Bool", "String", "SELF_TYPE"])
+            $ Left ("Can't inherit from " ++ super)
 
 
-      when (super == name)
-           $ Left $ "Can't inherit from self: " ++ name
+        when (super == name)
+            $ Left $ "Can't inherit from self: " ++ name
 
-      m <- eitherM
-      return $ M.adjust (\(x, ls, c) -> (x, name:ls, c)) super m
+        m <- eitherM
+        return $ M.adjust (\(x, ls, c) -> (x, name:ls, c)) super m
 
 join :: TypeEnv -> [String] -> String
 join env@(TypeEnv m) ts = let join' = join env
