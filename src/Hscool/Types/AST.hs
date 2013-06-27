@@ -77,6 +77,9 @@ data Formal = Formal Symbol Symbol
 instance Show Formal where
   show (Formal name type_) = printf "#1\n_formal\n  %s\n  %s\n" name type_
 
+instance Eq Formal where
+  (Formal n1 _)== (Formal n2 _) = n1 == n2
+
 data Expr a = Expr a (Expr' a)
 
 data Expr' a =

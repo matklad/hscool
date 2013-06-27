@@ -1,7 +1,7 @@
 module Hscool.Semant.TypeCheck where
-import           Control.Applicative   ((<$>), (<*>))
+import           Control.Applicative   ((<$>), (<*>), pure)
 import qualified Control.Monad         as Monad
-import           Data.List             (find)
+import           Data.List             (find, nub)
 import qualified Data.Map              as M
 import           Hscool.Semant.TypeEnv
 import           Hscool.Types.AST
@@ -39,7 +39,11 @@ typeCheckFeature (tenv, attrm, methm) (Class cname _ _ _) feature = case feature
                 else Left $ "Attribute initialization has wrong type: " ++ name
     where
         isSubtype' = isSubtype tenv
-        addFormals objects formals = undefined
+        addFormals objects formals = if formals == nub formals
+            then pure $ M.union
+                        (M.fromList [(name, type_)| (Formal name type_) <- formals])
+                        objects
+            else Left "formal parameters with duplicate names!"
 
 typeCheckExpr :: Context -> UExpr -> TExpr
 typeCheckExpr = undefined
