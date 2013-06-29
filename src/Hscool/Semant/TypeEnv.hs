@@ -1,5 +1,5 @@
-module Hscool.Semant.TypeEnv (getTypeEnv, getClass, superType, isSubtype, TypeEnv, object) where
-import           Control.Applicative ((<$>))
+module Hscool.Semant.TypeEnv (getTypeEnv, getClass, superType, isSubtype, TypeEnv, object, checkDefined) where
+import           Control.Applicative ((<$>), pure)
 import           Control.Monad       (when)
 import           Data.List           (nub, (\\))
 import qualified Data.Map            as M
@@ -45,6 +45,11 @@ isSubtype env@(TypeEnv m) t s = (t == "_no_type") || (t == s) ||
 
 getClass :: TypeEnv -> String -> UClass
 getClass (TypeEnv m) name = let (_,_,c) = m M.! name in c
+
+checkDefined :: TypeEnv -> String -> Either String ()
+checkDefined (TypeEnv m) c = case M.lookup c m of
+    Nothing -> Left $ "class is not defined: " ++ c
+    Just _ -> pure()
 
 simpleCheck :: [UClass] -> Either String [UClass]
 simpleCheck cls =

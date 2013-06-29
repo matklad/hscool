@@ -1,6 +1,6 @@
-module Hscool.Semant.GlobalEnv (GlobalEnv, getGlobalEnv, isSubtype, superType, getAttrs, getMethod) where
+module Hscool.Semant.GlobalEnv (GlobalEnv, getGlobalEnv, isSubtype, superType, getAttrs, getMethod, assureMain) where
 import           Control.Applicative   (pure, (<$>), (<*>))
-import           Control.Monad         (join)
+import           Control.Monad         (join, unless)
 import           Data.List             (find)
 import qualified Data.Map              as M
 import qualified Hscool.Semant.TypeEnv as T
@@ -64,3 +64,11 @@ getMethod :: GlobalEnv -> String -> String -> Either String [String]
 getMethod (_, _, methm) c m = case M.lookup m (methm M.! c) of
     Just x -> pure x
     Nothing -> Left $ "Class " ++ c ++ " doesn't define method " ++ m
+
+assureMain :: GlobalEnv -> Either String ()
+assureMain env@(tenv, _, _) = do
+    T.checkDefined tenv "Main"
+    t <- getMethod env "Main" "main"
+    unless (t == ["IO"])
+        $ Left "main has wrong signature"
+    return ()
