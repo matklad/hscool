@@ -130,10 +130,9 @@ typeCheckExpr context expression = do
 
             Neg e -> do
                 (et, e') <- aux cont e
-                unless (et == "Bool")
-                    $ Left "not argument is not boolean"
-                return ("Bool", Neg e')
-
+                unless (et=="Int")
+                    $ Left "~ argument is not integer"
+                return ("Int", Neg e')
 
             Le e1 e2 -> comp cont Le e1 e2
 
@@ -148,13 +147,13 @@ typeCheckExpr context expression = do
 
             Leq e1 e2 -> comp cont Leq e1 e2
 
+            IntConst s -> return ("Int", IntConst s)
+
             Comp e -> do
                 (et, e') <- aux cont e
-                unless (et=="Int")
-                    $ Left "~ argument is not integer"
-                return ("Int", Comp e')
-
-            IntConst s -> return ("Int", IntConst s)
+                unless (et == "Bool")
+                    $ Left "not argument is not boolean"
+                return ("Bool", Comp e')
 
             StringConst s -> return ("String", StringConst s)
 
