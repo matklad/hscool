@@ -68,7 +68,5 @@ getMethod (_, _, methm) c m = case M.lookup m (methm M.! c) of
 assureMain :: GlobalEnv -> Either String ()
 assureMain env@(tenv, _, _) = do
     T.checkDefined tenv "Main"
-    t <- getMethod env "Main" "main"
-    unless (t == ["IO"])
-        $ Left "main has wrong signature"
+    getMethod env "Main" "main"
     return ()
