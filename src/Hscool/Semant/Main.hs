@@ -18,4 +18,4 @@ main = do
 
   case result of
     Left msg -> print $ "Error: " ++ msg
-    Right r -> print r
+    Right r -> putStr $ show r
