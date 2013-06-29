@@ -1,6 +1,6 @@
 module Hscool.Semant.TypeCheck(typeCheck) where
 import           Control.Applicative     (pure, (<$>), (<*>))
-import Control.Monad
+import           Control.Monad
 import           Data.List               (nub)
 import qualified Data.Map                as M
 import qualified Hscool.Semant.GlobalEnv as G

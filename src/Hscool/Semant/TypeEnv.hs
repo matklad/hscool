@@ -1,5 +1,5 @@
 module Hscool.Semant.TypeEnv (getTypeEnv, getClass, superType, isSubtype, TypeEnv, object, checkDefined, extractClasses) where
-import           Control.Applicative ((<$>), pure)
+import           Control.Applicative (pure, (<$>))
 import           Control.Monad       (when)
 import           Data.List           (nub, (\\))
 import qualified Data.Map            as M
@@ -45,7 +45,7 @@ superType env@(TypeEnv m) ts = let
 
 isSubtype :: TypeEnv -> String -> String -> Bool
 isSubtype env@(TypeEnv m) t s = (t == "_no_type") || (t == s) ||
-    foldl (||) False (map (isSubtype env t) (let (_,ls,_) = m M.! s in ls))
+    or (map (isSubtype env t) (let (_,ls,_) = m M.! s in ls))
 
 getClass :: TypeEnv -> String -> UClass
 getClass (TypeEnv m) name = let (_,_,c) = m M.! name in c
