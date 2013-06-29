@@ -1,6 +1,6 @@
 module Hscool.Semant.GlobalEnv (GlobalEnv, getGlobalEnv, isSubtype, superType, getAttrs, getMethod, assureMain) where
 import           Control.Applicative   (pure, (<$>), (<*>))
-import           Control.Monad         (join, unless)
+import           Control.Monad         (join)
 import           Data.List             (find)
 import qualified Data.Map              as M
 import qualified Hscool.Semant.TypeEnv as T

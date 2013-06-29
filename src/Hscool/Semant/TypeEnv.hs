@@ -59,7 +59,9 @@ simpleCheck cls =
     where
         cls' = buildin ++ cls
 
+ne :: UExpr
 ne = Expr NT NoExpr
+
 object :: UClass
 object = Class "Object" "_"
     [ Method "abort" [] "Object" ne
