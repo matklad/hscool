@@ -76,17 +76,17 @@ io = Class "IO" "Object"
     "_"
 
 int :: UClass
-int = Class "Int" "_" [] "_"
+int = Class "Int" "Object" [] "_"
 
 string :: UClass
-string = Class "String" "_"
+string = Class "String" "Object"
     [ Method "length" [] "Int" ne
     , Method "concat" [Formal "s" "String"] "String" ne
     , Method "substr" [Formal "i" "Int", Formal "l" "Int"] "String" ne]
     "_"
 
 bool :: UClass
-bool = Class "Bool" "_" [] "_"
+bool = Class "Bool" "Object" [] "_"
 
 buildin :: [UClass]
 buildin = [object, io, int, string, bool]
