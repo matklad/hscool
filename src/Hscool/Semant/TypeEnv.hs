@@ -54,14 +54,32 @@ simpleCheck cls =
     where
         cls' = buildin ++ cls
 
+ne = Expr NT NoExpr
 object :: UClass
-object = Class "Object" "_" [] "_"
+object = Class "Object" "_"
+    [ Method "abort" [] "Object" ne
+    , Method "type_name" [] "String" ne
+    , Method "copy" [] "SELF_TYPE" ne]
+    "_"
+
 io :: UClass
-io = Class "IO" "Object" [] "_"
+io = Class "IO" "Object"
+    [ Method "out_string" [Formal "x" "String"] "SELF_TYPE" ne
+    , Method "out_int" [Formal "x" "Int"] "SELF_TYPE" ne
+    , Method "in_string" [] "String" ne
+    , Method "in_int" [] "Int" ne ]
+    "_"
+
 int :: UClass
 int = Class "Int" "_" [] "_"
+
 string :: UClass
-string = Class "String" "_" [] "_"
+string = Class "String" "_"
+    [ Method "length" [] "Int" ne
+    , Method "concat" [Formal "s" "String"] "String" ne
+    , Method "substr" [Formal "i" "Int", Formal "l" "Int"] "String" ne]
+    "_"
+
 bool :: UClass
 bool = Class "Bool" "_" [] "_"
 
