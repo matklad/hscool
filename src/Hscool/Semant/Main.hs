@@ -1,17 +1,19 @@
 module Main where
+import           Control.Applicative     ((<$>))
 import qualified Data.ByteString         as B
 import           Hscool.Semant.TypeCheck
-import           Hscool.Semant.TypeEnv
+import           Hscool.Semant.TypeEnv(getTypeEnv)
+import           Hscool.Semant.GlobalEnv(getGlobalEnv)
 import           Hscool.Types.AST
 
 
 main :: IO ()
 main = do
-  input <- B.getContents
-  let program@(Program classes) =  parseUProgram input
+  program@(Program classes) <- parseUProgram <$> B.getContents
   let result = do
           typeEnv <- getTypeEnv classes
-          typeCheck typeEnv program
+          globalEnv <- getGlobalEnv typeEnv classes
+          typeCheck globalEnv program
 
 
   case result of

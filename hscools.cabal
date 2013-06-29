@@ -14,7 +14,7 @@ Executable lexer
   Main-is:           Hscool/Lexer/Main.hs
   other-modules:     Hscool.Lexer.Base
                    , Hscool.Types.Token
-                   
+
   hs-source-dirs:    src
 
   Build-depends:     base
@@ -30,7 +30,7 @@ Executable parser
   other-modules:     Hscool.Lexer.Base
                    , Hscool.Parser.Base
                    , Hscool.Types.Token
-                   , Hscool.Types.AST      
+                   , Hscool.Types.AST
 
   hs-source-dirs:    src
 
@@ -47,8 +47,9 @@ Executable semant
   Main-is:           Hscool/Semant/Main.hs
   other-modules:     Hscool.Lexer.Base
                    , Hscool.Parser.Base
-                   , Hscool.Types.AST    
+                   , Hscool.Types.AST
                    , Hscool.Semant.TypeEnv
+                   , Hscool.Semant.GlobalEnv
                    , Hscool.Semant.TypeCheck
 
   hs-source-dirs:    src
