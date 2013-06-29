@@ -36,6 +36,7 @@ superType env@(TypeEnv m) ts = let
         [] -> error "empty superType"
         [_] -> error "one superType"
         [a, b] -> case (isSubtype' a b, isSubtype' b a) of
+            (True, True)  -> a
             (True, False) -> b
             (False, True) -> a
             (False, False) -> let (as, _, _) =  m M.! a in
