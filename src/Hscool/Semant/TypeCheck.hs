@@ -205,9 +205,10 @@ currentClass :: Context -> String
 currentClass (_, cls, _) = cls
 
 getType :: Context -> String -> Either String String
-getType  (_, _, objects) s = case M.lookup s objects of
-    Just t -> pure t
-    Nothing -> Left "unknown identifier"
+getType  (_, c, objects) s = case (s == "self", M.lookup s objects) of
+    (True, _) -> pure c
+    (_, Just t) -> pure t
+    (_, Nothing) -> Left $ "unknown identifier " ++ s
 
 addToContext :: Context -> String -> String -> Context
 addToContext (env, c, objects) name type_ = (env, c, M.insert name type_ objects)

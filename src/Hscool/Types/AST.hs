@@ -21,7 +21,10 @@ import           Control.Monad         (void)
 
 type Symbol = String
 
-joinAndIndent :: (Show a) => [a] -> String
+class Foo a where
+    printFoo :: a -> String
+
+joinAndIndent :: Show a => [a] -> String
 joinAndIndent = unlines . map indent
 -- intercalate down and unlines up. They behave differently with empty lists
 indent :: (Show a) => a -> String
@@ -29,13 +32,20 @@ indent = intercalate "\n" .  map ("  " ++) . lines . show
 
 data Program a = Program [Class a]
 data NT = NT
+
 instance Show NT where
   show _ = "_no_type"
+
+instance Foo NT where
+    printFoo _ = "_no_type"
+
+instance Foo String where
+    printFoo = id
 
 type UProgram = Program NT
 type TProgram = Program String
 
-instance Show a => Show (Program a) where
+instance Foo a => Show (Program a) where
   show (Program cls) = "#1\n_program\n" ++ joinAndIndent cls
 
 
@@ -50,7 +60,7 @@ instance Ord (Class a) where
 type UClass = Class NT
 type TClass = Class String
 
-instance Show a => Show (Class a) where
+instance Foo a => Show (Class a) where
   show (Class name super features fileName) =
     printf format name super fileName (joinAndIndent features)
     where
@@ -64,7 +74,7 @@ data Feature a =
 type UFeature = Feature NT
 type TFeature = Feature String
 
-instance Show a => Show (Feature a) where
+instance Foo a => Show (Feature a) where
   show f = case f of
     Method name formals type_ body ->  printf "#1\n_method\n  %s\n%s  %s\n%s"
                                        name (joinAndIndent formals) type_ (indent body)
@@ -111,8 +121,8 @@ data Expr' a =
 type UExpr = Expr NT
 type TExpr = Expr String
 
-instance Show a => Show (Expr a) where
-  show (Expr t expr)= aux ++ ": " ++ show t
+instance Foo a => Show (Expr a) where
+  show (Expr t expr)= aux ++ ": " ++ printFoo t
     where
       aux = case expr of
         Assign s e -> printf "#1\n_assign\n  %s\n%s\n" s (indent e)
@@ -152,7 +162,7 @@ data Branch a = Branch Symbol Symbol (Expr a)
 type UBranch = Branch NT
 type TBranch = Branch String
 
-instance Show a => Show (Branch a) where
+instance Foo a => Show (Branch a) where
   show (Branch name type_ e) = printf "#1\n_branch\n  %s\n  %s\n%s"
                                name type_ (indent e)
 
