@@ -34,7 +34,7 @@ superType env@(TypeEnv m) ts = let
     isSubtype' = isSubtype env
     in case ts of
         [] -> error "empty superType"
-        [_] -> error "one superType"
+        [a] -> a
         [a, b] -> case (isSubtype' a b, isSubtype' b a) of
             (True, True)  -> a
             (True, False) -> b
@@ -45,7 +45,7 @@ superType env@(TypeEnv m) ts = let
 
 isSubtype :: TypeEnv -> String -> String -> Bool
 isSubtype env@(TypeEnv m) t s = (t == "_no_type") || (t == s) ||
-    foldl (||) True (map (isSubtype env t) (let (_,ls,_) = m M.! s in ls))
+    foldl (||) False (map (isSubtype env t) (let (_,ls,_) = m M.! s in ls))
 
 getClass :: TypeEnv -> String -> UClass
 getClass (TypeEnv m) name = let (_,_,c) = m M.! name in c

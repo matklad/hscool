@@ -6,6 +6,7 @@ import qualified Data.Map                as M
 import qualified Hscool.Semant.GlobalEnv as G
 import           Hscool.Types.AST
 
+
 typeCheck :: G.GlobalEnv -> UProgram -> Either String TProgram
 typeCheck env (Program classes)= Program <$>  mapM (typeCheckClass env) classes
 
@@ -21,14 +22,14 @@ typeCheckFeature env cname feature = case feature of
             objects <- addFormals (G.getAttrs env cname) formals
             let context = (env, cname, objects)
             expr'@(Expr t _) <- typeCheckExpr context expr
-            if G.isSubtype env t type_
+            if isSubtype context t type_
                 then return $ Method name formals type_ expr'
-                else Left $ "Method body has wrong return type: " ++ name
+                else Left $ "Method body has wrong return type: " ++ name ++ t
 
         Attribute name type_ expr -> do
             let context = (env, cname, G.getAttrs env cname)
             expr'@(Expr t _) <- typeCheckExpr context expr
-            if G.isSubtype env t type_
+            if isSubtype context t type_
                 then return $ Attribute name type_ expr'
                 else Left $ "Attribute initialization has wrong type: " ++ name
     where
@@ -105,7 +106,9 @@ typeCheckExpr context expression = do
                     (_, e') <- aux cont e
                     (ts, ts', bs') <- unzip3 <$> mapM checkBranch bs
                     unless (nub ts == ts)
-                           $ Left "duplicate branches in case"
+                        $ Left "duplicate branches in case"
+                    when ("SELF_TYPE" `elem` ts)
+                        $ Left "reference compiler says that there can not be SELF_TYPE's in case"
                     return (superType cont ts', TypeCase e' bs')
 
             Block es -> do
@@ -192,10 +195,16 @@ lift:: (G.GlobalEnv -> a) -> Context -> a
 lift f (env, _, _) = f env
 
 isSubtype :: Context -> String -> String -> Bool
-isSubtype = lift G.isSubtype
+isSubtype (env, c, _) a b = case (a == "SELF_TYPE", b == "SELF_TYPE") of
+    (True, True) -> True
+    (_, True) -> False
+    (True, False) -> G.isSubtype env c b
+    (False, False) -> G.isSubtype env a b
 
 superType :: Context -> [String] -> String
-superType = lift G.superType
+superType (env,c, _) types = case nub types of
+    [t] -> t -- handles SELF_TYPE
+    _ -> G.superType env (map (\x -> if x == "SELF_TYPE" then c else x) types)
 
 getMethod :: Context -> String -> String -> Either String [String]
 getMethod = lift G.getMethod
