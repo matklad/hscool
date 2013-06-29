@@ -62,9 +62,11 @@ getAttrs :: GlobalEnv -> String -> M.Map String String
 getAttrs (_, attrm, _) c = attrm M.! c
 
 getMethod :: GlobalEnv -> String -> String -> Either String [String]
-getMethod (_, _, methm) c m = case M.lookup m (methm M.! c) of
-    Just x -> pure x
-    Nothing -> Left $ "Class " ++ c ++ " doesn't define method " ++ m
+getMethod (tenv, _, methm) c m = do
+    T.checkDefined tenv c
+    case M.lookup m (methm M.! c) of
+        Just x -> return x
+        Nothing -> Left $ "Class " ++ c ++ " doesn't define method " ++ m
 
 assureMain :: GlobalEnv -> Either String ()
 assureMain env@(tenv, _, _) = do
