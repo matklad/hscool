@@ -13,7 +13,7 @@ main = do
     program@(Program classes) <- parseUProgram <$> B.getContents
     let result = do
         typeEnv <- getTypeEnv classes
-        globalEnv <- getGlobalEnv typeEnv classes
+        globalEnv <- getGlobalEnv typeEnv
         typed_program <- typeCheck globalEnv program
         assureMain globalEnv
         return typed_program

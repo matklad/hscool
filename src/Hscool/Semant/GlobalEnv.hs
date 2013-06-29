@@ -11,10 +11,11 @@ type AttrEnv = M.Map String (M.Map String String)
 type MethodEnv = M.Map String (M.Map String [String])
 type GlobalEnv = (T.TypeEnv, AttrEnv, MethodEnv)
 
-getGlobalEnv :: T.TypeEnv -> [UClass] -> Either String GlobalEnv
-getGlobalEnv tenv classes = let
-        getAttrs :: UClass -> Either String (M.Map String String)
-        getAttrs c@(Class _ super _ _) = if c == T.object
+getGlobalEnv :: T.TypeEnv -> Either String GlobalEnv
+getGlobalEnv tenv = let
+        classes = T.extractClasses tenv
+        getAttributes :: UClass -> Either String (M.Map String String)
+        getAttributes c@(Class _ super _ _) = if c == T.object
                 then return $ attrs T.object
                 else join $ joinAttrs <$> superAttrs <*> return myAttrs
             where
@@ -22,7 +23,7 @@ getGlobalEnv tenv classes = let
                     [(name, type_) | (Attribute name type_ _) <- features]
                 s = T.getClass tenv super
                 myAttrs = attrs c
-                superAttrs = getAttrs s
+                superAttrs = getAttributes s
                 joinAttrs m1 m2 = let m = M.intersection m1 m2 in
                     if M.null m
                     then return $ M.union m1 m2
@@ -47,7 +48,7 @@ getGlobalEnv tenv classes = let
         classNames = [name | (Class name _ _ _) <- classes]
         aux f = M.fromList <$> (zip classNames <$> mapM f classes)
     in do
-        attrm <- aux getAttrs
+        attrm <- aux getAttributes
         methm <- aux getMethods
         return (tenv, attrm, methm)
 

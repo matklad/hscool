@@ -1,4 +1,4 @@
-module Hscool.Semant.TypeEnv (getTypeEnv, getClass, superType, isSubtype, TypeEnv, object, checkDefined) where
+module Hscool.Semant.TypeEnv (getTypeEnv, getClass, superType, isSubtype, TypeEnv, object, checkDefined, extractClasses) where
 import           Control.Applicative ((<$>), pure)
 import           Control.Monad       (when)
 import           Data.List           (nub, (\\))
@@ -24,6 +24,9 @@ getTypeEnv cs = do
                  $ Left $ "Can't inherit from self: " ++ name
             m <- eitherM
             return $ M.adjust (\(x, ls, c) -> (x, name:ls, c)) super m
+
+extractClasses :: TypeEnv -> [UClass]
+extractClasses (TypeEnv m) = [c | (_, _, c) <- M.elems m]
 
 superType :: TypeEnv -> [String] -> String
 superType env@(TypeEnv m) ts = let
