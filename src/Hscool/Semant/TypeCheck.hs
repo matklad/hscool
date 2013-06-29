@@ -168,7 +168,7 @@ typeCheckExpr context expression = do
 
             NoExpr -> return ("_no_type", NoExpr)
 
-            Object s -> (\x -> (x, Object x)) <$> getType cont s
+            Object s -> (\x -> (x, Object s)) <$> getType cont s
 
         aux:: Context -> UExpr -> Either String (String, TExpr)
         aux cont (Expr NT expr') = (\(t, e) -> (t, Expr t e)) <$> aux' cont expr'
@@ -205,8 +205,8 @@ currentClass :: Context -> String
 currentClass (_, cls, _) = cls
 
 getType :: Context -> String -> Either String String
-getType  (_, c, objects) s = case (s == "self", M.lookup s objects) of
-    (True, _) -> pure c
+getType  (_, _, objects) s = case (s == "self", M.lookup s objects) of
+    (True, _) -> pure "SELF_TYPE"
     (_, Just t) -> pure t
     (_, Nothing) -> Left $ "unknown identifier " ++ s
 
