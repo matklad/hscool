@@ -4,7 +4,7 @@
 module Hscool.Types.AST
        (UProgram, UClass, UFeature, UExpr, UBranch, Symbol, Formal(..), NT(..)
        , TProgram, TClass, TFeature, TExpr, TBranch
-       , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..)
+       , Program(..), Class(..), Feature(..), Expr(..), InnerExpr(..), Branch(..)
        , parseUProgram, parseTProgram)
        where
 
@@ -90,9 +90,9 @@ instance Show Formal where
 instance Eq Formal where
   (Formal n1 _)== (Formal n2 _) = n1 == n2
 
-data Expr a = Expr a (Expr' a)
+data Expr a = Expr a (InnerExpr a)
 
-data Expr' a =
+data InnerExpr a =
     Assign Symbol (Expr a)
   | Dispatch (Expr a) Symbol [Expr a]
   | StaticDispatch (Expr a) Symbol Symbol [Expr a]

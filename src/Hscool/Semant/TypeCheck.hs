@@ -44,7 +44,7 @@ typeCheckExpr context expression = do
     (_, expression') <- aux context expression
     return expression'
     where
-        aux':: Context -> Expr' NT -> Either String (String, Expr' String)
+        aux':: Context -> InnerExpr NT -> Either String (String, InnerExpr String)
         aux' cont expr' = case expr' of
             Assign o e -> do
                 ot <- getType cont o
