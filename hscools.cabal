@@ -58,6 +58,12 @@ Executable semant
                    , array
                    , containers
 
+Executable cgen
+  Main-is:           Hscool/CGen/Main.hs
+  other-modules:     Hscool.Types.AST
 
+  hs-source-dirs:    src
 
-
+  Build-depends:     base
+                   , array
+                   , containers
