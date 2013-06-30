@@ -8,20 +8,17 @@ module Hscool.Types.AST
          parseUProgram)
        where
 
+import           Control.Applicative   (Applicative, (*>), (<$>), (<*), (<*>),
+                                        (<|>), pure)
+import           Control.Monad         (void)
 import           Data.Attoparsec.Char8 (Parser, choice, endOfLine, many', many1,
                                         notChar, parseOnly, skipSpace, string)
 import           Data.ByteString.Char8 (ByteString)
 import           Data.List             (intercalate)
 import           Text.Printf           (printf)
-import           Control.Applicative   (Applicative, (*>), (<$>), (<*), (<*>),
-                                        (<|>))
-import           Control.Monad         (void)
 
 
 type Symbol = String
-
-class Foo a where
-    printFoo :: a -> String
 
 joinAndIndent :: Show a => [a] -> String
 joinAndIndent = unlines . map indent
@@ -32,14 +29,17 @@ indent = intercalate "\n" .  map ("  " ++) . lines . show
 data Program a = Program [Class a]
 data NT = NT
 
-instance Show NT where
-  show _ = "_no_type"
+class Foo a where
+    printFoo :: a -> String
+    fooParser :: Parser a
 
 instance Foo NT where
     printFoo _ = "_no_type"
+    fooParser =  line $ (string ": _no_type" *> pure NT)
 
 instance Foo String where
     printFoo = id
+    fooParser = undefined
 
 type UProgram = Program NT
 type TProgram = Program String
@@ -166,7 +166,7 @@ instance Foo a => Show (Branch a) where
                                name type_ (indent e)
 
 uProgram :: Parser UProgram
-uProgram = header "_program" >> (Program <$> many1 uClass)
+uProgram = header "_program" *> (Program <$> many1 uClass)
 
 uClass :: Parser UClass
 uClass = do
@@ -187,13 +187,13 @@ cp = line $ string ")"
 uFeature :: Parser UFeature
 uFeature = method <|> attribute
   where
-    method = header "_method" >>
+    method = header "_method" *>
              (Method <$> symbol <*> many' formal <*> symbol <*> uExpr)
-    attribute = header "_attr" >>
+    attribute = header "_attr" *>
                 (Attribute <$> symbol <*> symbol <*> uExpr)
 
 formal :: Parser Formal
-formal = header "_formal" >>
+formal = header "_formal" *>
          (Formal <$> symbol <*> symbol)
 
 uExpr :: Parser UExpr
@@ -204,64 +204,64 @@ uExpr = do
         line $ string ": _no_type"
         return $ Expr NT e
   where
-    assign = header "_assign" >>
-             Assign <$> symbol <*> uExpr
-    dispatch = header "_dispatch" >>
-               Dispatch <$> uExpr <*> symbol <*> wrap op (many' uExpr) cp
-    staticDispatch = header "_static_dispatch" >>
-                     StaticDispatch <$> uExpr <*> symbol <*> symbol
-                     <*> wrap op (many' uExpr) cp
-    cond = header "_cond" >>
-           Cond <$> uExpr <*> uExpr <*> uExpr
-    loop = header "_loop" >>
-           Loop <$> uExpr <*> uExpr
-    typeCase = header "_typcase" >>
-                TypeCase <$> uExpr <*> many1 uBranch
-    block = header "_block" >>
-            Block <$> many' uExpr
-    let_ = header "_let" >>
-           Let <$> symbol <*> symbol <*> uExpr <*> uExpr
-    add = header "_plus" >>
-          Add <$> uExpr <*> uExpr
-    minus = header "_sub" >>
-            Minus <$> uExpr <*> uExpr
-    mul = header "_mul" >>
-          Mul <$> uExpr <*> uExpr
-    divide = header "_divide" >>
-          Div <$> uExpr <*> uExpr
-    neg = header "_neg" >>
-          Neg <$> uExpr
-    le = header "_lt" >>
-         Le <$> uExpr <*> uExpr
-    eq = header "_eq" >>
-         Eq <$> uExpr <*> uExpr
-    leq = header "_leq" >>
-          Leq <$> uExpr <*> uExpr
-    comp = header "_comp" >>
-           Comp <$> uExpr
-    intConst = header "_int" >>
-               IntConst <$> symbol
-    stringConst = header "_string" >>
-                  StringConst <$> symbol
-    boolConst = header "_bool" >>
-                BoolConst <$> ((== "1") <$> symbol)
-    new = header "_new" >>
-          New <$> symbol
-    isVoid = header "_isvoid" >>
-             IsVoid <$> uExpr
-    noExpr = header "_no_expr" >>
-             return NoExpr
-    object = header "_object" >>
-             Object <$> symbol
+    assign = header "_assign" *>
+             (Assign <$> symbol <*> uExpr)
+    dispatch = header "_dispatch" *>
+               (Dispatch <$> uExpr <*> symbol <*> wrap op (many' uExpr) cp)
+    staticDispatch = header "_static_dispatch" *>
+                     (StaticDispatch <$> uExpr <*> symbol <*> symbol
+                     <*> wrap op (many' uExpr) cp)
+    cond = header "_cond" *>
+           (Cond <$> uExpr <*> uExpr <*> uExpr)
+    loop = header "_loop" *>
+           (Loop <$> uExpr <*> uExpr)
+    typeCase = header "_typcase" *>
+                (TypeCase <$> uExpr <*> many1 uBranch)
+    block = header "_block" *>
+            (Block <$> many' uExpr)
+    let_ = header "_let" *>
+           (Let <$> symbol <*> symbol <*> uExpr <*> uExpr)
+    add = header "_plus" *>
+          (Add <$> uExpr <*> uExpr)
+    minus = header "_sub" *>
+            (Minus <$> uExpr <*> uExpr)
+    mul = header "_mul" *>
+          (Mul <$> uExpr <*> uExpr)
+    divide = header "_divide" *>
+          (Div <$> uExpr <*> uExpr)
+    neg = header "_neg" *>
+          (Neg <$> uExpr)
+    le = header "_lt" *>
+         (Le <$> uExpr <*> uExpr)
+    eq = header "_eq" *>
+         (Eq <$> uExpr <*> uExpr)
+    leq = header "_leq" *>
+          (Leq <$> uExpr <*> uExpr)
+    comp = header "_comp" *>
+           (Comp <$> uExpr)
+    intConst = header "_int" *>
+               (IntConst <$> symbol)
+    stringConst = header "_string" *>
+                  (StringConst <$> symbol)
+    boolConst = header "_bool" *>
+                (BoolConst <$> ((== "1") <$> symbol))
+    new = header "_new" *>
+          (New <$> symbol)
+    isVoid = header "_isvoid" *>
+             (IsVoid <$> uExpr)
+    noExpr = header "_no_expr" *>
+             pure NoExpr
+    object = header "_object" *>
+             (Object <$> symbol)
 
 uBranch :: Parser UBranch
-uBranch = header "_branch" >> Branch <$> symbol <*> symbol <*> uExpr
+uBranch = header "_branch" *> (Branch <$> symbol <*> symbol <*> uExpr)
 
 line :: Parser a -> Parser a
 line p = wrap skipSpace p endOfLine
 
 header :: ByteString -> Parser ()
-header h = void (line lineNumber >> line (string h))
+header h = void (line lineNumber *> line (string h))
 
 lineNumber :: Parser ByteString
 lineNumber = string "#1"
