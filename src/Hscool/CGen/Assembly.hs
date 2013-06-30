@@ -1,11 +1,35 @@
 module Hscool.CGen.Assembly where
 
-data AssemblyCode = AssemblyCode [LabeledLine]
+import Text.Printf(printf)
 
-data LabeledLine = Label String CodeLine | Unlabeled CodeLine
+data AssemblyCode = AssemblyCode [CodeLine]
 
-data CodeLine = Comment String | Directive | Instruction
+data CodeLine = Comment String
+              | Label String
+              | Ascii String
+              | Asciiz String
+              | Word Int
+              | Wordl String
+              | Data
 
-data Directive = undefined
+instance Show AssemblyCode where
+    show (AssemblyCode codeLines) = let
+            aux x = case x of
+                (Comment {}) -> show x
+                (Label {}) -> show x
+                _ -> "    " ++ (show x)
+        in
+            unlines . (map aux) $ codeLines
 
-data Instruction = undefined
+instance Show CodeLine where
+    show line = case line of
+        (Comment c) -> "# " ++ c
+        (Label l) -> l ++ ":"
+        (Ascii s) -> ".ascii " ++ s
+        (Asciiz s) -> ".asciiz " ++ s
+        (Word i) -> printf ".word %d" i
+        (Wordl l) -> printf ".word %s" l
+        Data -> ".data"
+
+gcTag :: CodeLine
+gcTag = Word (-1)
