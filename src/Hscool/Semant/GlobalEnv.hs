@@ -1,4 +1,8 @@
-module Hscool.Semant.GlobalEnv (GlobalEnv, getGlobalEnv, isSubtype, superType, getAttrs, getMethod, assureMain) where
+module Hscool.Semant.GlobalEnv
+        (GlobalEnv, getGlobalEnv, isSubtype, superType
+        , getAttrs, getMethod, assureMain)
+        where
+
 import           Control.Applicative   (pure, (<$>), (<*>))
 import           Control.Monad         (join)
 import           Data.List             (find)
@@ -15,9 +19,9 @@ getGlobalEnv :: T.TypeEnv -> Either String GlobalEnv
 getGlobalEnv tenv = let
         classes = T.extractClasses tenv
         getAttributes :: UClass -> Either String (M.Map String String)
-        getAttributes c@(Class _ super _ _) = if c == T.object
-                then return $ attrs T.object
-                else join $ joinAttrs <$> superAttrs <*> return myAttrs
+        getAttributes c@(Class _ super _ _) = if T.isObject c
+                then pure $ attrs c
+                else join $ joinAttrs <$> superAttrs <*> pure myAttrs
             where
                 attrs (Class _ _ features _) = M.fromList
                     [(name, type_) | (Attribute name type_ _) <- features]
@@ -26,12 +30,12 @@ getGlobalEnv tenv = let
                 superAttrs = getAttributes s
                 joinAttrs m1 m2 = let m = M.intersection m1 m2 in
                     if M.null m
-                    then return $ M.union m1 m2
+                    then pure $ M.union m1 m2
                     else Left $ "Attribute redefinition " ++ show (M.keys m)
 
         getMethods :: UClass -> Either String (M.Map String [String])
-        getMethods c@(Class _ super _ _) = if c == T.object
-                then return $ methods T.object
+        getMethods c@(Class _ super _ _) = if T.isObject c
+                then pure $ methods c
                 else join $ joinMethods <$> superMethods <*> pure myMethods
             where
                 methods (Class _ _ features _) = M.fromList

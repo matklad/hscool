@@ -174,19 +174,20 @@ typeCheckExpr context expression = do
 
         aux:: Context -> UExpr -> Either String (String, TExpr)
         aux cont (Expr NT expr') = (\(t, e) -> (t, Expr t e)) <$> aux' cont expr'
+
         arith cont c e1 e2 = do
             (e1t, e1') <- aux cont e1
             (e2t, e2') <- aux cont e2
             unless (e1t == "Int" && e2t == "Int")
                 $ Left "no integer arithmetics"
             return ("Int", c e1' e2')
+
         comp cont c e1 e2 =  do
             (e1t, e1') <- aux cont e1
             (e2t, e2') <- aux cont e2
             unless (e1t == "Int" && e2t == "Int")
                 $ Left "no integer comparison"
             return ("Bool", c e1' e2')
-
 
 
 type Context = (G.GlobalEnv, String, M.Map String String)

@@ -13,7 +13,6 @@ import           Data.Attoparsec.Char8 (Parser, choice, endOfLine, many', many1,
 import           Data.ByteString.Char8 (ByteString)
 import           Data.List             (intercalate)
 import           Text.Printf           (printf)
-
 import           Control.Applicative   (Applicative, (*>), (<$>), (<*), (<*>),
                                         (<|>))
 import           Control.Monad         (void)

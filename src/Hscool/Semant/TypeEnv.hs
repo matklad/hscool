@@ -1,13 +1,17 @@
-module Hscool.Semant.TypeEnv (getTypeEnv, getClass, superType, isSubtype, TypeEnv, object, checkDefined, extractClasses) where
+module Hscool.Semant.TypeEnv
+        (TypeEnv, getTypeEnv, getClass, superType, isSubtype
+        , isObject, checkDefined, extractClasses)
+        where
+
 import           Control.Applicative (pure, (<$>))
 import           Control.Monad       (when)
 import           Data.List           (nub, (\\))
 import qualified Data.Map            as M
 import           Hscool.Types.AST
 
+
 data TypeEnv = TypeEnv (M.Map String (String, [String], UClass))
   deriving Show
-
 
 getTypeEnv :: [UClass] -> Either String TypeEnv
 getTypeEnv cs = do
@@ -72,6 +76,9 @@ object = Class "Object" "_"
     , Method "type_name" [] "String" ne
     , Method "copy" [] "SELF_TYPE" ne]
     "_"
+
+isObject :: UClass -> Bool
+isObject = (== object)
 
 io :: UClass
 io = Class "IO" "Object"
