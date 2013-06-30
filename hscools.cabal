@@ -63,6 +63,7 @@ Executable cgen
   other-modules:     Hscool.Types.AST
                    , Hscool.CGen.Assembly
                    , Hscool.CGen.Symbols
+                   , Hscool.CGen.Gen
 
   hs-source-dirs:    src
 

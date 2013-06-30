@@ -5,16 +5,16 @@ import Hscool.CGen.Assembly
 -- .global
 lMainProtObj = "Main_protObj"
 lMainInit = "Main_init"
-lMainMain = "main.Main"
-lInt_protObj = "Int_protObj"
-lInt_init = "Int_init"
-lString_protObj = "String_protObj"
-lString_init = "String_init"
-lInt_tag = "_int_tag"
-lBool_tag = "_bool_tag"
-lString_tag = ")string_tag"
-lClass_nameTab = "class_nameTab"
-lBool_const0 = "bool_const0"
+lMainMain = "Main.main"
+lIntProtObj = "Int_protObj"
+lIntInit = "Int_init"
+lStringProtObj = "String_protObj"
+lStringInit = "String_init"
+lIntTag = "_int_tag"
+lBoolTag = "_bool_tag"
+lStringTag = "_string_tag"
+lClassNameTab = "class_nameTab"
+lBoolConst0 = "bool_const0"
 
 -- exported by RE
 lObjectCopy = "Object.copy"
@@ -32,4 +32,32 @@ lDispatchAbort = "_dispatch_abort"
 lCaseAbort = "_case_abort"
 lCaseAbort2 = "_case_abort2"
 
+-- Tags
 gcTag = Word (-1)
+objectTag = 0
+intTag = 1
+boolTag = 2
+stringTag = 3
+
+-- registers
+
+ra0 = "$a0"
+rra = "$ra"
+
+-- stuff
+lDoNothing = "_do_nothing"
+
+genObjectProto label tag disp_tag attrs = AssemblyCode $ [
+                                            gcTag
+                                          , Label label
+                                          , Word tag
+                                          , Word size
+                                          , Wordl disp_tag] ++ map Word attrs
+    where
+        size = 4 * (3 + length attrs)
+
+
+intProto = genObjectProto lIntProtObj intTag "nothing" [0]
+
+
+doNothing l = AssemblyCode [ Label l, Jr rra]

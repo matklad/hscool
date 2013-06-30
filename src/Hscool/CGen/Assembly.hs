@@ -4,6 +4,8 @@ import Text.Printf(printf)
 
 data AssemblyCode = AssemblyCode [CodeLine]
 
+(AssemblyCode a) |> (AssemblyCode b) = AssemblyCode (a ++ b)
+
 data CodeLine = Comment String
               | Label String
               | Ascii String
@@ -11,6 +13,9 @@ data CodeLine = Comment String
               | Word Int
               | Wordl String
               | Data
+              | Text
+              | Global String
+              | Jr String
 
 instance Show AssemblyCode where
     show (AssemblyCode codeLines) = let
@@ -23,13 +28,13 @@ instance Show AssemblyCode where
 
 instance Show CodeLine where
     show line = case line of
-        (Comment c) -> "# " ++ c
-        (Label l) -> l ++ ":"
+        (Comment s) -> "# " ++ s
+        (Label s) -> s ++ ":"
         (Ascii s) -> ".ascii " ++ s
         (Asciiz s) -> ".asciiz " ++ s
         (Word i) -> printf ".word %d" i
-        (Wordl l) -> printf ".word %s" l
+        (Wordl s) -> ".word " ++ s
         Data -> ".data"
-
-gcTag :: CodeLine
-gcTag = Word (-1)
+        Text -> ".text"
+        (Global s) -> ".globl " ++ s
+        Jr s -> printf "j %s" s
