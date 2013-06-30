@@ -4,15 +4,16 @@
 module Hscool.Types.AST
        (UProgram, UClass, UFeature, UExpr, UBranch, Symbol, Formal(..), NT(..)
        , TProgram, TClass, TFeature, TExpr, TBranch
-       , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..),
-         parseUProgram)
+       , Program(..), Class(..), Feature(..), Expr(..), Expr'(..), Branch(..)
+       , parseUProgram, parseTProgram)
        where
 
-import           Control.Applicative   (Applicative, (*>), (<$>), (<*), (<*>),
-                                        (<|>), pure)
+import           Control.Applicative   (Applicative, pure, (*>), (<$>), (<*),
+                                        (<*>), (<|>))
 import           Control.Monad         (void)
 import           Data.Attoparsec.Char8 (Parser, choice, endOfLine, many', many1,
-                                        notChar, parseOnly, skipSpace, string)
+                                        notChar, parseOnly, skipSpace,
+                                        string)
 import           Data.ByteString.Char8 (ByteString)
 import           Data.List             (intercalate)
 import           Text.Printf           (printf)
@@ -35,11 +36,11 @@ class Foo a where
 
 instance Foo NT where
     printFoo _ = "_no_type"
-    fooParser =  line $ (string ": _no_type" *> pure NT)
+    fooParser = line $ string ": _no_type" *> pure NT
 
 instance Foo String where
     printFoo = id
-    fooParser = undefined
+    fooParser = line $ string ": " *> many' (notChar '\n')
 
 type UProgram = Program NT
 type TProgram = Program String
@@ -121,9 +122,9 @@ type UExpr = Expr NT
 type TExpr = Expr String
 
 instance Foo a => Show (Expr a) where
-  show (Expr t expr)= aux ++ ": " ++ printFoo t
+  show (Expr t expression)= aux ++ ": " ++ printFoo t
     where
-      aux = case expr of
+      aux = case expression of
         Assign s e -> printf "#1\n_assign\n  %s\n%s\n" s (indent e)
         Dispatch e s actuals -> printf "#1\n_dispatch\n%s\n  %s\n  (\n%s  )\n"
                                 (indent e) s (joinAndIndent actuals)
@@ -165,17 +166,17 @@ instance Foo a => Show (Branch a) where
   show (Branch name type_ e) = printf "#1\n_branch\n  %s\n  %s\n%s"
                                name type_ (indent e)
 
-uProgram :: Parser UProgram
-uProgram = header "_program" *> (Program <$> many1 uClass)
+program :: Foo a => Parser (Program a)
+program = header "_program" *> (Program <$> many1 klass)
 
-uClass :: Parser UClass
-uClass = do
+klass :: Foo a => Parser (Class a)
+klass = do
   header "_class"
   name <- symbol
   super <-  symbol
   file <- stringLiteral
   op
-  features <- many' uFeature
+  features <- many' feature
   cp
   return $ Class name super features file
 
@@ -184,61 +185,61 @@ op = line $ string "("
 cp :: Parser ByteString
 cp = line $ string ")"
 
-uFeature :: Parser UFeature
-uFeature = method <|> attribute
+feature :: Foo a => Parser (Feature a)
+feature = method <|> attribute
   where
     method = header "_method" *>
-             (Method <$> symbol <*> many' formal <*> symbol <*> uExpr)
+             (Method <$> symbol <*> many' formal <*> symbol <*> expr)
     attribute = header "_attr" *>
-                (Attribute <$> symbol <*> symbol <*> uExpr)
+                (Attribute <$> symbol <*> symbol <*> expr)
 
 formal :: Parser Formal
 formal = header "_formal" *>
          (Formal <$> symbol <*> symbol)
 
-uExpr :: Parser UExpr
-uExpr = do
+expr :: Foo a => Parser (Expr a)
+expr = do
         e <- choice [assign, dispatch, staticDispatch, cond, loop, typeCase,
                      block, let_, add, minus, mul, divide, neg, le, eq, leq, comp,
                      intConst, stringConst, boolConst, new, isVoid, noExpr, object]
-        line $ string ": _no_type"
-        return $ Expr NT e
+        t <- fooParser
+        return $ Expr t e
   where
     assign = header "_assign" *>
-             (Assign <$> symbol <*> uExpr)
+             (Assign <$> symbol <*> expr)
     dispatch = header "_dispatch" *>
-               (Dispatch <$> uExpr <*> symbol <*> wrap op (many' uExpr) cp)
+               (Dispatch <$> expr <*> symbol <*> wrap op (many' expr) cp)
     staticDispatch = header "_static_dispatch" *>
-                     (StaticDispatch <$> uExpr <*> symbol <*> symbol
-                     <*> wrap op (many' uExpr) cp)
+                     (StaticDispatch <$> expr <*> symbol <*> symbol
+                     <*> wrap op (many' expr) cp)
     cond = header "_cond" *>
-           (Cond <$> uExpr <*> uExpr <*> uExpr)
+           (Cond <$> expr <*> expr <*> expr)
     loop = header "_loop" *>
-           (Loop <$> uExpr <*> uExpr)
+           (Loop <$> expr <*> expr)
     typeCase = header "_typcase" *>
-                (TypeCase <$> uExpr <*> many1 uBranch)
+                (TypeCase <$> expr <*> many1 branch)
     block = header "_block" *>
-            (Block <$> many' uExpr)
+            (Block <$> many' expr)
     let_ = header "_let" *>
-           (Let <$> symbol <*> symbol <*> uExpr <*> uExpr)
+           (Let <$> symbol <*> symbol <*> expr <*> expr)
     add = header "_plus" *>
-          (Add <$> uExpr <*> uExpr)
+          (Add <$> expr <*> expr)
     minus = header "_sub" *>
-            (Minus <$> uExpr <*> uExpr)
+            (Minus <$> expr <*> expr)
     mul = header "_mul" *>
-          (Mul <$> uExpr <*> uExpr)
+          (Mul <$> expr <*> expr)
     divide = header "_divide" *>
-          (Div <$> uExpr <*> uExpr)
+          (Div <$> expr <*> expr)
     neg = header "_neg" *>
-          (Neg <$> uExpr)
+          (Neg <$> expr)
     le = header "_lt" *>
-         (Le <$> uExpr <*> uExpr)
+         (Le <$> expr <*> expr)
     eq = header "_eq" *>
-         (Eq <$> uExpr <*> uExpr)
+         (Eq <$> expr <*> expr)
     leq = header "_leq" *>
-          (Leq <$> uExpr <*> uExpr)
+          (Leq <$> expr <*> expr)
     comp = header "_comp" *>
-           (Comp <$> uExpr)
+           (Comp <$> expr)
     intConst = header "_int" *>
                (IntConst <$> symbol)
     stringConst = header "_string" *>
@@ -248,14 +249,14 @@ uExpr = do
     new = header "_new" *>
           (New <$> symbol)
     isVoid = header "_isvoid" *>
-             (IsVoid <$> uExpr)
+             (IsVoid <$> expr)
     noExpr = header "_no_expr" *>
              pure NoExpr
     object = header "_object" *>
              (Object <$> symbol)
 
-uBranch :: Parser UBranch
-uBranch = header "_branch" *> (Branch <$> symbol <*> symbol <*> uExpr)
+branch :: Foo a => Parser (Branch a)
+branch = header "_branch" *> (Branch <$> symbol <*> symbol <*> expr)
 
 line :: Parser a -> Parser a
 line p = wrap skipSpace p endOfLine
@@ -277,4 +278,7 @@ wrap :: Parser a -> Parser b -> Parser c -> Parser b
 wrap p1 p2 p3 = (p1 *> p2) <* p3
 
 parseUProgram :: ByteString -> UProgram
-parseUProgram input = case parseOnly uProgram input of Right r -> r
+parseUProgram input = case parseOnly program input of Right r -> r
+
+parseTProgram :: ByteString -> TProgram
+parseTProgram input = case parseOnly program input of Right r -> r
