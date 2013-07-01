@@ -15,6 +15,11 @@ lBoolTag = "_bool_tag"
 lStringTag = "_string_tag"
 lClassNameTab = "class_nameTab"
 lBoolConst0 = "bool_const0"
+lMemMgrInitializer = "_MemMgr_INITIALIZER"
+lMemMgrCollector = "_MemMgr_COLLECTOR"
+lHeapStart = "heap_start"
+lMemMgrTest = "_MemMgr_TEST"
+
 
 -- exported by RE
 lObjectCopy = "Object.copy"
@@ -31,6 +36,8 @@ lEqualityTest = "equality_test"
 lDispatchAbort = "_dispatch_abort"
 lCaseAbort = "_case_abort"
 lCaseAbort2 = "_case_abort2"
+lNoGCInit = "_NoGC_Init"
+lNoGCCollect = "_NoGC_Collect"
 
 -- Tags
 gcTag = Word (-1)

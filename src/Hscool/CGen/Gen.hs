@@ -14,15 +14,17 @@ dummy = AssemblyCode [
         , Global lMainProtObj
         , Global lMainInit
         , Global lMainMain
-        , Global "_MemMgr_INITIALIZER"
-        , Global "_MemMgr_COLLECTOR"
-        , Label "_MemMgr_INITIALIZER"
-        , Wordl "_NoGC_Init"
-        , Label "_MemMgr_COLLECTOR"
-        , Wordl "_NoGC_Collect"
-        , Label "heap_start"
+        , Global lMemMgrInitializer
+        , Global lMemMgrCollector
+        , Global lHeapStart
+        , Global lMemMgrTest
+        , Label lMemMgrInitializer
+        , Wordl lNoGCInit
+        , Label lMemMgrCollector
+        , Wordl lNoGCCollect
+        , Label lHeapStart
         , Word 0
-        , Label "_MemMgr_TEST"
+        , Label lMemMgrTest
         , Word 0
         ] |>
         (genObjectProto lMainProtObj intTag "nothing" [0]) |>
