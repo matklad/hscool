@@ -64,6 +64,7 @@ Executable cgen
                    , Hscool.CGen.Assembly
                    , Hscool.CGen.Symbols
                    , Hscool.CGen.Gen
+                   , Hscool.CGen.Preprocess
 
   hs-source-dirs:    src
 
