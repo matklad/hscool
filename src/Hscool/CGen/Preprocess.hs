@@ -1,49 +1,163 @@
 module Hscool.CGen.Preprocess where
 
-import           Hscool.Types.AST
+import qualified          Hscool.Types.AST as A
 import qualified Data.Map as M
+import Hscool.CGen.Intermediate
+import Data.List.Utils(replace)
+import Data.List(findIndex)
 
-preprocess :: TProgram -> TProgram
-preprocess = alphaConvert . makeInits
+preprocess :: A.TProgram -> Program
+preprocess (A.Program aClasses) = let
+        classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses] M.!)
+        classes = map getClass aClasses
+        methods = concat . (map getMethods) $ aClasses
 
-
-makeInits :: TProgram -> TProgram
-makeInits (Program classes) = let
-        makeInit :: TClass -> TClass
-        makeInit c@(Class name super _ file) = let
-                aux attrs = let (as, ex) = aux $ tail attrs in case attrs of
-                    [] -> ([], [])
-                    a@(Attribute _ _ (Expr "_no_type" NoExpr)):_ -> (a:as, ex)
-                    Attribute n t e :_ -> (Attribute n t (Expr "_no_type" NoExpr):as,
-                                            Expr t (Assign n e):ex)
-                (methods, attributes) = extractFeatures c
-                (newAttrs, ini) = aux attributes
+        getAttrMap c@(A.Class _ super _ _) = let
+                (_, attrs) = extractFeatures c
+                m' = if elem super ["Object", "IO"]
+                     then []
+                     else getAttrMap $ classMap super
+                m = [(n, A i)|(i, A.Attribute n _ _) <- zip [1 + length m'..] attrs]
             in
-                Class name super (newAttrs ++ (Method "_init" [] "Object" (Expr "Object" $ Block ini):methods)) file
+                m' ++ m
 
-    in
-        Program $ map makeInit classes
-
-extractFeatures :: TClass -> ([TFeature], [TFeature])
-extractFeatures (Class _ _ features _) = let
-        methods = [m | m@(Method {}) <- features]
-        attributes = [a | a@(Attribute {}) <- features]
-    in
-        (methods, attributes)
-
-
-alphaConvert :: TProgram -> TProgram
-alphaConvert (Program classes) = let
-        m = M.fromList [(name, c) | c@(Class name _ _ _) <- classes]
-        rename attrs start = [Attribute ('a' : show i) t e|(i, Attribute _ t e) <- zip [start..] attrs]
-        startInd (Class _ super _ _) = if super `elem` ["Object", "IO"]
-            then 1
-            else let s = (m M.! super) in (length.snd.extractFeatures $ s) + startInd s
-        convertAttributes c@(Class name super _ file) = let
-                (methods, attributes) = extractFeatures c
+        getMethodMap c@(A.Class name super _ _) = let
+                (meths, _) = extractFeatures c
+                m' = if elem super ["Object", "IO"]
+                     then [] -- it's a lie!
+                     else getMethodMap $ classMap super
+                m = [(n, concat [name, ".", n])|(A.Method n _ _ _) <- meths]
+                aux ls (n, v) = case lookup n ls of
+                    Nothing -> ls ++ [(n, v)]
+                    Just v' -> replace [(n, v')] [(n, v)] ls
             in
-                Class name super (rename attributes (startInd c) ++ methods) file
+                foldl aux m' m
 
-        convertedClasses = map convertAttributes classes
+        getClass c@(A.Class name super _ _) = let
+                attrM = getAttrMap c
+                methodM = getMethodMap c
+            in
+                Class name super (length attrM) (map snd methodM)
+
+        getMethods c@(A.Class name super _ _) = let
+                (meths, _) = extractFeatures c
+                aux (A.Method n formals ret e) = let
+                        pMap = M.fromList [(n, P i) | (i, A.Formal n _) <- zip [1..] formals]
+                        objMap = pMap `M.union` (M.fromList $ getAttrMap c)
+                        (nLoc, e') = prepExpr objMap 1 e
+                    in
+                        Method (concat [name, ".", n]) (length formals) nLoc e'
+            in
+                map aux meths
+
+        prepExpr objMap nLoc (A.Expr t inner) = case inner of
+                A.Assign s e -> let
+                        (nLoc', e') = prepExpr objMap nLoc e
+                    in
+                        (nLoc', Assign (objMap M.! s) e')
+                A.Dispatch e s es -> let
+                        ti = case findIndex (\(n, v) -> n == s) (getMethodMap . classMap $ t) of
+                            Nothing -> error $ "unkown method " ++ s
+                            Just x -> x
+                        (nLoc', e') = prepExpr objMap nLoc e
+                        (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
+                    in
+                        (maximum $ nLoc' : nLocs, Dispatch e' ti es')
+                A.StaticDispatch e tt s es -> let
+                        ti = case findIndex (\(n, v) -> n == s) (getMethodMap . classMap $ tt) of
+                            Nothing -> error $ "unkown method " ++ s
+                            Just x -> x
+                        (nLoc', e') = prepExpr objMap nLoc e
+                        (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
+                    in
+                        (maximum $ nLoc' : nLocs, StaticDispatch e' (tt, ti) es')
+                A.Cond e1 e2 e3 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                        (nLoc3, e3') = prepExpr objMap nLoc e3
+                    in
+                        (maximum [nLoc1, nLoc2, nLoc3], Cond e1' e2' e3')
+                A.Loop e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Loop e1' e2')
+                A.TypeCase es bs -> error "don't now how to deal with branches yet =("
+                A.Block es -> let
+                        (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
+                    in
+                        (maximum nLocs, Block es')
+                A.Let s _ e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        nLoc' = succ nLoc
+                        objMap' = M.insert s (L nLoc') objMap
+                        (nLoc2, e2') = prepExpr objMap' nLoc' e2
+                    in
+                        (maximum [nLoc1, nLoc2], Block [Assign (L nLoc') e1', e2'])
+                A.Add e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Add e1' e2')
+                A.Minus e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Minus e1' e2')
+
+                A.Mul e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Mul e1' e2')
+
+                A.Div e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Div e1' e2')
+
+                A.Neg e -> let
+                        (nLoc', e') = prepExpr objMap nLoc e
+                    in
+                        (nLoc', Neg e')
+                A.Le e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Le e1' e2')
+                A.Eq e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Eq e1' e2')
+                A.Leq e1 e2 -> let
+                        (nLoc1, e1') = prepExpr objMap nLoc e1
+                        (nLoc2, e2') = prepExpr objMap nLoc e2
+                    in
+                        (maximum [nLoc1, nLoc2], Leq e1' e2')
+                A.Comp e -> let
+                        (nLoc', e') = prepExpr objMap nLoc e
+                    in
+                        (nLoc', Comp e')
+                A.IntConst s -> (nLoc, IntConst s)
+                A.StringConst s -> (nLoc, StringConst s)
+                A.BoolConst b -> (nLoc, BoolConst b)
+                A.New s -> (nLoc, New s)
+                A.IsVoid e -> let
+                        (nLoc', e') = prepExpr objMap nLoc e
+                    in
+                        (nLoc', IsVoid e')
+
+                A.NoExpr -> error "WAT?! NO EXPR!!"
+                A.Object s -> (nLoc, Object $ objMap M.! s)
     in
-        Program convertedClasses
+        Program classes methods
+
+
+extractFeatures :: A.TClass -> ([A.TFeature], [A.TFeature])
+extractFeatures (A.Class _ _ features _) = let
+        methods = [x | x@(A.Method {}) <- features]
+        attrs = [x | x@(A.Attribute {}) <- features]
+    in
+        (methods, attrs)

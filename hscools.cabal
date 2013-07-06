@@ -72,3 +72,4 @@ Executable cgen
   Build-depends:     base
                    , array
                    , containers
+                   , MissingH

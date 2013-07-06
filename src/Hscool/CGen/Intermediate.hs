@@ -1,15 +1,18 @@
 module Hscool.CGen.Intermediate where
 
 data Program = Program [Class] [Method]
+    deriving Show
 
 data Class = Class String String Int [String]
+    deriving Show
 
-data Method = Method String Int Expr
+data Method = Method String Int Int Expr
+    deriving Show
 
 data Expr =
     Assign Id Expr
-  | Dispatch Expr Id [Expr]
-  | StaticDispatch Expr Id String [Expr]
+  | Dispatch Expr Int [Expr]
+  | StaticDispatch Expr (String, Int) [Expr]
   | Cond Expr Expr Expr
   | Loop Expr Expr
   | TypeCase Expr [Branch]
@@ -29,7 +32,10 @@ data Expr =
   | New String
   | IsVoid Expr
   | Object Id
+  deriving Show
 
 data Id = A Int | P Int | L Int
+    deriving Show
 
 data Branch = String Expr
+    deriving Show
