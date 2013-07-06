@@ -1,10 +1,22 @@
 module Hscool.CGen.Assembly where
+import Data.Monoid
 
 import Text.Printf(printf)
 
+class Code a where
+    toAsm :: a -> AssemblyCode
+    (|>) :: a -> a -> AssemblyCode
+    a |> b = toAsm a `mappend` toAsm b
+
+
 data AssemblyCode = AssemblyCode [CodeLine]
 
-(AssemblyCode a) |> (AssemblyCode b) = AssemblyCode (a ++ b)
+instance Monoid AssemblyCode where
+    mempty = AssemblyCode []
+    AssemblyCode a `mappend` AssemblyCode b = AssemblyCode (a `mappend` b)
+
+instance Code AssemblyCode where
+    toAsm = id
 
 data CodeLine = Comment String
               | Label String
@@ -16,6 +28,9 @@ data CodeLine = Comment String
               | Text
               | Global String
               | Jr String
+
+instance Code CodeLine where
+    toAsm l = AssemblyCode [l]
 
 instance Show AssemblyCode where
     show (AssemblyCode codeLines) = let
