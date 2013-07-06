@@ -3,7 +3,7 @@ module Hscool.CGen.Intermediate where
 data Program = Program [Class] [Method]
     deriving Show
 
-data Class = Class String String Int [String]
+data Class = Class Int String String Int [String]
     deriving Show
 
 data Method = Method String Int Int Expr

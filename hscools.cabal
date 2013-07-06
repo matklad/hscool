@@ -62,7 +62,6 @@ Executable cgen
   Main-is:           Hscool/CGen/Main.hs
   other-modules:     Hscool.Types.AST
                    , Hscool.CGen.Assembly
-                   , Hscool.CGen.Symbols
                    , Hscool.CGen.Gen
                    , Hscool.CGen.Preprocess
                    , Hscool.CGen.Intermediate

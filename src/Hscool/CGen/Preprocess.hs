@@ -12,8 +12,12 @@ preprocess :: A.TProgram -> Program
 preprocess (A.Program aClasses) = let
         aClasses' = buildin ++ aClasses
         classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses'] M.!)
-        classes = map getClass aClasses'
-        methods = concatMap getMethods aClasses'
+        classes = map getClass $ zip [0..] aClasses'
+        methods = filter
+            (\(Method name _ _ _) -> not  (name `elem` ["String.length", "String.substr", "String.concat",
+                "IO.in_int", "IO.in_string", "IO.out_int", "IO.out_string", "Object_init", "Object.copy",
+                "Object.type_name", "Object.abort"]))
+            (concatMap getMethods aClasses')
 
         getAttrMap c@(A.Class name super _ _) = let
                 (_, attrs) = extractFeatures c
@@ -36,11 +40,11 @@ preprocess (A.Program aClasses) = let
             in
                 foldl aux m' m
 
-        getClass c@(A.Class name super _ _) = let
+        getClass (tag, c@(A.Class name super _ _)) = let
                 attrM = getAttrMap c
                 methodM = getMethodMap c
             in
-                Class name super (length attrM) (map snd methodM)
+                Class tag name super (length attrM) (map snd methodM)
 
         getInit c@(A.Class name super _ _) = let
                 (_, attrs) = extractFeatures c
@@ -64,8 +68,9 @@ preprocess (A.Program aClasses) = let
                         pMap = M.fromList [(p, P i) | (i, A.Formal p _) <- zip [1..] formals']
                         objMap = pMap `M.union` M.fromList  (getAttrMap c)
                         (nLoc, e') = prepExpr objMap 0 e
+                        qualName = concat [name, if n == "_init" then "" else ".", n]
                     in
-                        Method (concat [name, ".", n]) (length formals') nLoc e'
+                        Method qualName (length formals') nLoc e'
 
                 prepExpr objMap nLoc (A.Expr _ inner) = case inner of
                         A.Assign s e -> let
