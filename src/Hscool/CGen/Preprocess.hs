@@ -1,20 +1,21 @@
 module Hscool.CGen.Preprocess where
 
-import qualified          Hscool.Types.AST as A
-import qualified Data.Map as M
-import Hscool.CGen.Intermediate
-import Data.List.Utils(replace)
-import Data.List(findIndex)
+import           Data.List                (findIndex)
+import           Data.List.Utils          (replace)
+import qualified Data.Map                 as M
+import           Data.Maybe               (fromMaybe)
+import           Hscool.CGen.Intermediate
+import qualified Hscool.Types.AST         as A
 
 preprocess :: A.TProgram -> Program
 preprocess (A.Program aClasses) = let
         classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses] M.!)
         classes = map getClass aClasses
-        methods = concat . (map getMethods) $ aClasses
+        methods = concatMap getMethods aClasses
 
         getAttrMap c@(A.Class _ super _ _) = let
                 (_, attrs) = extractFeatures c
-                m' = if elem super ["Object", "IO"]
+                m' = if super `elem` ["Object", "IO"]
                      then []
                      else getAttrMap $ classMap super
                 m = [(n, A i)|(i, A.Attribute n _ _) <- zip [1 + length m'..] attrs]
@@ -23,7 +24,7 @@ preprocess (A.Program aClasses) = let
 
         getMethodMap c@(A.Class name super _ _) = let
                 (meths, _) = extractFeatures c
-                m' = if elem super ["Object", "IO"]
+                m' = if super `elem` ["Object", "IO"]
                      then [] -- it's a lie!
                      else getMethodMap $ classMap super
                 m = [(n, concat [name, ".", n])|(A.Method n _ _ _) <- meths]
@@ -39,11 +40,11 @@ preprocess (A.Program aClasses) = let
             in
                 Class name super (length attrM) (map snd methodM)
 
-        getMethods c@(A.Class name super _ _) = let
+        getMethods c@(A.Class name _ _ _) = let
                 (meths, _) = extractFeatures c
-                aux (A.Method n formals ret e) = let
-                        pMap = M.fromList [(n, P i) | (i, A.Formal n _) <- zip [1..] formals]
-                        objMap = pMap `M.union` (M.fromList $ getAttrMap c)
+                aux (A.Method n formals _ e) = let
+                        pMap = M.fromList [(p, P i) | (i, A.Formal p _) <- zip [1..] formals]
+                        objMap = pMap `M.union` M.fromList  (getAttrMap c)
                         (nLoc, e') = prepExpr objMap 1 e
                     in
                         Method (concat [name, ".", n]) (length formals) nLoc e'
@@ -56,17 +57,17 @@ preprocess (A.Program aClasses) = let
                     in
                         (nLoc', Assign (objMap M.! s) e')
                 A.Dispatch e s es -> let
-                        ti = case findIndex (\(n, v) -> n == s) (getMethodMap . classMap $ t) of
-                            Nothing -> error $ "unkown method " ++ s
-                            Just x -> x
+                        ti = fromMaybe
+                                (error $ "unkown method " ++ s)
+                                (findIndex (\(n, _) -> n == s) (getMethodMap . classMap $ t))
                         (nLoc', e') = prepExpr objMap nLoc e
                         (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
                     in
                         (maximum $ nLoc' : nLocs, Dispatch e' ti es')
                 A.StaticDispatch e tt s es -> let
-                        ti = case findIndex (\(n, v) -> n == s) (getMethodMap . classMap $ tt) of
-                            Nothing -> error $ "unkown method " ++ s
-                            Just x -> x
+                        ti = fromMaybe
+                                (error $ "unkown method " ++ s)
+                                (findIndex (\(n, _) -> n == s) (getMethodMap . classMap $ tt))
                         (nLoc', e') = prepExpr objMap nLoc e
                         (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
                     in
@@ -82,7 +83,7 @@ preprocess (A.Program aClasses) = let
                         (nLoc2, e2') = prepExpr objMap nLoc e2
                     in
                         (maximum [nLoc1, nLoc2], Loop e1' e2')
-                A.TypeCase es bs -> error "don't now how to deal with branches yet =("
+                A.TypeCase _ _ -> error "don't now how to deal with branches yet =("
                 A.Block es -> let
                         (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
                     in
@@ -150,7 +151,7 @@ preprocess (A.Program aClasses) = let
                         (nLoc', IsVoid e')
 
                 A.NoExpr -> error "WAT?! NO EXPR!!"
-                A.Object s -> (nLoc, Object $ objMap M.! s)
+                A.Object s -> (nLoc, Object $    objMap M.! s)
     in
         Program classes methods
 
