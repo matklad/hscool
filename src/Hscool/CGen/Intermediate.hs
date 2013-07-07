@@ -1,6 +1,6 @@
 module Hscool.CGen.Intermediate where
 
-data Program = Program [Class] [Method]
+data Program = Program [Class] [Method] [String] [String]
     deriving Show
 
 data Class = Class Int String String Int [String]
@@ -26,15 +26,12 @@ data Expr =
   | Eq Expr Expr
   | Leq Expr Expr
   | Comp Expr
-  | IntConst String
-  | StringConst String
-  | BoolConst Bool
   | New String
   | IsVoid Expr
   | Object Id
   deriving Show
 
-data Id = A Int | P Int | L Int
+data Id = A Int | P Int | L Int | C String
     deriving Show
 
 data Branch = String Expr

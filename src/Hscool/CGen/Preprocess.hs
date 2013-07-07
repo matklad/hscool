@@ -1,23 +1,29 @@
 module Hscool.CGen.Preprocess where
 
 import           Control.Applicative      ((<$>))
-import           Data.List                (findIndex)
+import           Data.List                (findIndex, unzip4)
 import           Data.List.Utils          (replace)
 import qualified Data.Map                 as M
 import           Data.Maybe               (catMaybes, fromMaybe)
 import           Hscool.CGen.Intermediate
 import qualified Hscool.Types.AST         as A
+import Data.Char(isAlphaNum)
+
 
 preprocess :: A.TProgram -> Program
 preprocess (A.Program aClasses) = let
         aClasses' = buildin ++ aClasses
         classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses'] M.!)
-        classes = map getClass $ zip [0..] aClasses'
+        classes = zipWith (curry getClass) [0..] aClasses'
+        (methods', ints', strings') = unzip3 . map getMethods $ aClasses'
+        ints = concat ints'
+        strings = concat strings'
+
         methods = filter
-            (\(Method name _ _ _) -> not  (name `elem` ["String.length", "String.substr", "String.concat",
+            (\(Method name _ _ _) ->  (name `notElem` ["String.length", "String.substr", "String.concat",
                 "IO.in_int", "IO.in_string", "IO.out_int", "IO.out_string", "Object_init", "Object.copy",
                 "Object.type_name", "Object.abort"]))
-            (concatMap getMethods aClasses')
+            (concat methods')
 
         getAttrMap c@(A.Class name super _ _) = let
                 (_, attrs) = extractFeatures c
@@ -67,16 +73,19 @@ preprocess (A.Program aClasses) = let
                         formals' = A.Formal "self" "SELF_TYPE" : formals
                         pMap = M.fromList [(p, P i) | (i, A.Formal p _) <- zip [1..] formals']
                         objMap = pMap `M.union` M.fromList  (getAttrMap c)
-                        (nLoc, e') = prepExpr objMap 0 e
+                        (nLoc, e', is, ss) = prepExpr objMap 0 e
                         qualName = concat [name, if n == "_init" then "" else ".", n]
                     in
-                        Method qualName (length formals') nLoc e'
+                        (Method qualName (length formals') nLoc e', is, ss)
+                (pMeths, ints', strings') = unzip3 . map aux $ meths'
+                ints = concat ints'
+                strings = concat strings'
 
                 prepExpr objMap nLoc (A.Expr _ inner) = case inner of
                         A.Assign s e -> let
-                                (nLoc', e') = prepExpr objMap nLoc e
+                                (nLoc', e', is, ss) = prepExpr objMap nLoc e
                             in
-                                (nLoc', Assign (objMap M.! s) e')
+                                (nLoc', Assign (objMap M.! s) e', is, ss)
                         A.Dispatch e@(A.Expr t _) s es -> let
                                 t' = if t /= "SELF_TYPE"
                                      then t
@@ -84,104 +93,114 @@ preprocess (A.Program aClasses) = let
                                 ti = fromMaybe
                                         (error $ "unkown method " ++ s)
                                         (findIndex (\(n, _) -> n == s) (getMethodMap . classMap $ t'))
-                                (nLoc', e') = prepExpr objMap nLoc e
-                                (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
+                                (nLoc', e', is, ss) = prepExpr objMap nLoc e
+                                (nLocs, es', iss, sss) = unzip4 . map (prepExpr objMap nLoc) $ es
                             in
-                                (maximum $ nLoc' : nLocs, Dispatch e' ti es')
+                                (maximum $ nLoc' : nLocs, Dispatch e' ti es', concat (is:iss), concat (ss:sss))
                         A.StaticDispatch e tt s es -> let
                                 ti = fromMaybe
                                         (error $ "unkown method " ++ s)
                                         (findIndex (\(n, _) -> n == s) (getMethodMap . classMap $ tt))
-                                (nLoc', e') = prepExpr objMap nLoc e
-                                (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
+                                (nLoc', e', is, ss) = prepExpr objMap nLoc e
+                                (nLocs, es', iss, sss) = unzip4 . map (prepExpr objMap nLoc) $ es
                             in
-                                (maximum $ nLoc' : nLocs, StaticDispatch e' (tt, ti) es')
+                                (maximum $ nLoc' : nLocs, StaticDispatch e' (tt, ti) es', concat (is:iss), concat (ss:sss))
                         A.Cond e1 e2 e3 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
-                                (nLoc3, e3') = prepExpr objMap nLoc e3
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
+                                (nLoc3, e3', is3, ss3) = prepExpr objMap nLoc e3
                             in
-                                (maximum [nLoc1, nLoc2, nLoc3], Cond e1' e2' e3')
+                                (maximum [nLoc1, nLoc2, nLoc3], Cond e1' e2' e3', concat [is1, is2, is3], concat [ss1, ss2, ss3])
                         A.Loop e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Loop e1' e2')
+                                (maximum [nLoc1, nLoc2], Loop e1' e2', is1 ++ is2, ss1 ++ ss2)
                         A.TypeCase _ _ -> error "don't now how to deal with branches yet =("
                         A.Block es -> let
-                                (nLocs, es') = unzip . map (prepExpr objMap nLoc) $ es
+                                (nLocs, es', iss, sss) = unzip4 . map (prepExpr objMap nLoc) $ es
                             in
-                                (maximum $ nLoc : nLocs, Block es')
+                                (maximum $ nLoc : nLocs, Block es', concat iss, concat sss)
                         A.Let s _ e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
                                 nLoc' = succ nLoc
                                 objMap' = M.insert s (L nLoc') objMap
-                                (nLoc2, e2') = prepExpr objMap' nLoc' e2
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap' nLoc' e2
                             in
-                                (maximum [nLoc1, nLoc2], Block [Assign (L nLoc') e1', e2'])
+                                (maximum [nLoc1, nLoc2], Block [Assign (L nLoc') e1', e2'], is1 ++ is2, ss1 ++ ss2)
                         A.Add e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Add e1' e2')
+                                (maximum [nLoc1, nLoc2], Add e1' e2', is1 ++ is2, ss1 ++ ss2)
                         A.Minus e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Minus e1' e2')
+                                (maximum [nLoc1, nLoc2], Minus e1' e2', is1 ++ is2, ss1 ++ ss2)
 
                         A.Mul e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Mul e1' e2')
+                                (maximum [nLoc1, nLoc2], Mul e1' e2', is1 ++ is2, ss1 ++ ss2)
 
                         A.Div e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Div e1' e2')
+                                (maximum [nLoc1, nLoc2], Div e1' e2', is1 ++ is2, ss1 ++ ss2)
 
                         A.Neg e -> let
-                                (nLoc', e') = prepExpr objMap nLoc e
+                                (nLoc', e', is, ss) = prepExpr objMap nLoc e
                             in
-                                (nLoc', Neg e')
+                                (nLoc', Neg e', is, ss)
                         A.Le e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Le e1' e2')
+                                (maximum [nLoc1, nLoc2], Le e1' e2', is1 ++ is2, ss1 ++ ss2)
                         A.Eq e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Eq e1' e2')
+                                (maximum [nLoc1, nLoc2], Eq e1' e2', is1 ++ is2, ss1 ++ ss2)
                         A.Leq e1 e2 -> let
-                                (nLoc1, e1') = prepExpr objMap nLoc e1
-                                (nLoc2, e2') = prepExpr objMap nLoc e2
+                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                                (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
-                                (maximum [nLoc1, nLoc2], Leq e1' e2')
+                                (maximum [nLoc1, nLoc2], Leq e1' e2', is1 ++ is2, ss1 ++ ss2)
                         A.Comp e -> let
-                                (nLoc', e') = prepExpr objMap nLoc e
+                                (nLoc', e', is, ss) = prepExpr objMap nLoc e
                             in
-                                (nLoc', Comp e')
-                        A.IntConst s -> (nLoc, IntConst s)
-                        A.StringConst s -> (nLoc, StringConst $ read s)
-                        A.BoolConst b -> (nLoc, BoolConst b)
-                        A.New s -> (nLoc, New s)
+                                (nLoc', Comp e', is, ss)
+                        A.IntConst s -> (nLoc, Object (C $ getIntLabel s), [s], [])
+                        A.StringConst s -> let s' = read s in
+                            (nLoc, Object (C $ getStringLabel s'), [], [s'])
+                        A.BoolConst b -> (nLoc, Object (C $ getBoolLabel b), [], [])
+                        A.New s -> (nLoc, New s, [], [])
                         A.IsVoid e -> let
-                                (nLoc', e') = prepExpr objMap nLoc e
+                                (nLoc', e', is, ss) = prepExpr objMap nLoc e
                             in
-                                (nLoc', IsVoid e')
+                                (nLoc', IsVoid e', is, ss)
 
-                        A.NoExpr -> (nLoc, Block []) -- NoExpr happens =(
-                        A.Object s -> (nLoc, Object $ objMap M.! s)
+                        A.NoExpr -> (nLoc, Block [], [], []) -- NoExpr happens =(
+                        A.Object s -> (nLoc, Object $ objMap M.! s, [], [])
 
             in
-                map aux meths'
+                (pMeths, ints, strings)
     in
-        Program classes methods
+        Program classes methods ints strings
 
+
+getIntLabel :: String -> String
+getIntLabel s = "int_const_" ++ s
+getStringLabel :: String -> String
+getStringLabel s = "str_const_" ++ (filter isAlphaNum s)
+getBoolLabel :: Bool -> String
+getBoolLabel b = if b
+    then "bool_const1"
+    else "bool_const0"
 
 extractFeatures :: A.TClass -> ([A.TFeature], [A.TFeature])
 extractFeatures (A.Class _ _ features _) = let

@@ -49,8 +49,8 @@ instance Show CodeLine where
     show line = case line of
         (Comment s) -> "# " ++ s
         (Label s) -> s ++ ":"
-        (Ascii s) -> ".ascii " ++ s
-        (Asciiz s) -> ".asciiz " ++ s
+        (Ascii s) -> ".ascii " ++ show s
+        (Asciiz s) -> ".asciiz " ++ show s
         (Word i) -> printf ".word %d" i
         (Wordl s) -> ".word " ++ s
         Data -> ".data"
@@ -153,10 +153,6 @@ lNoGCCollect = "_NoGC_Collect"
 
 -- Tags
 gcTag = Word (-1)
-objectTag = 0
-intTag = 1
-boolTag = 2
-stringTag = 3
 
 -- registers
 
