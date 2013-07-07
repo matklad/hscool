@@ -29,9 +29,12 @@ data CodeLine = Comment String
               | Global String
               | Jr String
               | J String
+              | Jalr String
               | Sw String Int String
               | Lw String Int String
               | Addiu String String Int
+              | La String String
+              | Move String String
 
 instance Code CodeLine where
     toAsm l = [l]
@@ -56,15 +59,21 @@ instance Show CodeLine where
         Data -> ".data"
         Text -> ".text"
         (Global s) -> ".globl " ++ s
-        Jr s -> printf "jr %s" s
+        Jr r -> printf "jr %s" r
         J s -> printf "j %s" s
+        Jalr r -> printf "jalr %s" r
         Sw s o d -> printf "sw %s, %d(%s)" s o d
         Lw s o d -> printf "lw %s, %d(%s)" s o d
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
+        La d imm -> printf "la %s, %s" d imm
+        Move dest source -> printf "move %s, %s" dest source
 
 
 push :: String -> AssemblyCode
 push r = Sw r 0 rsp |> Addiu rsp rsp (-4)
+
+pushl :: String -> AssemblyCode
+pushl l = La rt9 l |> push rt9
 
 pop :: String -> AssemblyCode
 pop r = Addiu rsp rsp 4 |> Lw r 0 rsp
@@ -160,3 +169,5 @@ ra0 = "$a0"
 rra = "$ra"
 rsp = "$sp"
 rfp = "$fp"
+rt0 = "$t0"
+rt9 = "$t9"

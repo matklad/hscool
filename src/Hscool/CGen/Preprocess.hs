@@ -21,7 +21,7 @@ preprocess (A.Program aClasses) = let
 
         methods = filter
             (\(Method name _ _ _) ->  (name `notElem` ["String.length", "String.substr", "String.concat",
-                "IO.in_int", "IO.in_string", "IO.out_int", "IO.out_string", "Object_init", "Object.copy",
+                "IO.in_int", "IO.in_string", "IO.out_int", "IO.out_string", "Object.copy",
                 "Object.type_name", "Object.abort"]))
             (concat methods')
 
@@ -39,7 +39,7 @@ preprocess (A.Program aClasses) = let
                 m' = if name /= "Object"
                      then getMethodMap $ classMap super
                      else []
-                m = [(n, concat [name, ".", n])|(A.Method n _ _ _) <- meths]
+                m = ("_init", name ++ "_init") : [(n, concat [name, ".", n])|(A.Method n _ _ _) <- meths]
                 aux ls (n, v) = case lookup n ls of
                     Nothing -> ls ++ [(n, v)]
                     Just v' -> replace [(n, v')] [(n, v)] ls
@@ -70,13 +70,12 @@ preprocess (A.Program aClasses) = let
                 meths' = getInit c : meths
 
                 aux (A.Method n formals _ e) = let
-                        formals' = A.Formal "self" "SELF_TYPE" : formals
-                        pMap = M.fromList [(p, P i) | (i, A.Formal p _) <- zip [1..] formals']
+                        pMap = M.fromList [(p, P i) | (i, A.Formal p _) <- zip [1..] formals]
                         objMap = pMap `M.union` M.fromList  (getAttrMap c)
                         (nLoc, e', is, ss) = prepExpr objMap 0 e
                         qualName = concat [name, if n == "_init" then "" else ".", n]
                     in
-                        (Method qualName (length formals') nLoc e', is, ss)
+                        (Method qualName (length formals) nLoc e', is, ss)
                 (pMeths, ints', strings') = unzip3 . map aux $ meths'
                 ints = concat ints'
                 strings = concat strings'
@@ -185,7 +184,7 @@ preprocess (A.Program aClasses) = let
                                 (nLoc', IsVoid e', is, ss)
 
                         A.NoExpr -> (nLoc, Block [], [], []) -- NoExpr happens =(
-                        A.Object s -> (nLoc, Object $ objMap M.! s, [], [])
+                        A.Object s -> (nLoc, Object $ if s /= "self" then objMap M.! s else S, [], [])
 
             in
                 (pMeths, ints, strings)
@@ -216,8 +215,7 @@ object :: A.TClass
 object = A.Class "Object" "_"
     [ A.Method "abort" [] "Object" ne
     , A.Method "type_name" [] "String" ne
-    , A.Method "copy" [] "SELF_TYPE" ne
-    , A.Method "_init" [] "SELF_TYPE" ne]
+    , A.Method "copy" [] "SELF_TYPE" ne]
     "_"
 
 isObject :: A.TClass -> Bool

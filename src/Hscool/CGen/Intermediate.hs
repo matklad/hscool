@@ -31,7 +31,7 @@ data Expr =
   | Object Id
   deriving Show
 
-data Id = A Int | P Int | L Int | C String
+data Id = A Int | P Int | L Int | C String | S
     deriving Show
 
 data Branch = String Expr
