@@ -19,9 +19,9 @@ cgen (Program classes meths intConsts strConsts) = let
             |> Word strTag
             |> Label lBoolTag
             |> Word boolTag
-        consts = (map (makeIntConst strTag) intConsts)
-            |> (map (makeStrConst intTag) strConsts)
-            |> (map (makeBoolConst boolTag) [False, True])
+        consts = map (makeIntConst strTag) intConsts
+            |> map (makeStrConst intTag) strConsts
+            |> map (makeBoolConst boolTag) [False, True]
     in
            Data
         |> globalLabels
@@ -76,7 +76,7 @@ makeStrConst :: Int -> String -> AssemblyCode
 makeStrConst tag s = gcTag
     |> Label (getStringLabel s)
     |> Word tag
-    |> Word (3 + (length s) `div` 4)
+    |> Word (3 + length s `div` 4)
     |> Wordl "String_dispTab"
     |> Word (length s)
     |> Asciiz s
@@ -91,7 +91,7 @@ makeBoolConst tag b = gcTag
 
 makeDispTable :: Class -> AssemblyCode
 makeDispTable (Class _ name _ _ meths) = Label (name ++ "_dispTab")
-    |> map (\s -> Wordl s) meths
+    |> map Wordl meths
 
 {- calling conventions
 foo() {
@@ -125,6 +125,7 @@ foo() {
     #        Heap           #
     ######################### 0x00000000
 
+bar pop arguments
 
 
 -}
@@ -146,19 +147,20 @@ findTag cls s = let [Class tag _ _ _ _] = [c | c@(Class _ name _ _ _) <- cls, na
     in tag
 
 genExpr :: Expr -> AssemblyCode
-genExpr e = case e of
+genExpr expr = case expr of
     Object S -> push ra0
     Object (C s) -> pushl s
-    Dispatch e i es -> genExpr e
-        |> Move rt0 ra0
-        |> pop ra0
-        |> push rt0
+    Dispatch e i es -> push rfp
+        |> push ra0
+        |> genExpr e
         |> map genExpr es
-        |> Addiu rt0 rt0 8
-        |> Lw rt0 0 rt0
+        |> Lw ra0 (4 * (1 + length es)) rsp
+        |> Lw rt0 8 ra0
         |> Lw rt0 (i * 4) rt0
         |> Jalr rt0
         |> pop ra0
+        |> pop ra0
+        |> pop rfp
     _ -> []
 
 
