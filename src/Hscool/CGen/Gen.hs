@@ -154,17 +154,33 @@ genExpr expr = case expr of
     Object (C s) -> pushl s
     Object (P i) -> Lw rt0 (-4 * i) rfp
         |> push rt0
-    Dispatch e i es -> push rfp
-        |> push ra0
+    Assign S _ -> error "assigning to self!o_O"
+    Assign (C _) _ -> error "assigning to const!O_o"
+
+    Dispatch e i es -> preCall
         |> genExpr e
         |> map genExpr es
         |> Lw ra0 (4 * (1 + length es)) rsp
         |> Lw rt0 8 ra0
         |> Lw rt0 (i * 4) rt0
         |> Jalr rt0
-        |> pop ra0
-        |> pop ra0
-        |> pop rfp
+        |> postCall
+    StaticDispatch e (cls, i) es -> preCall
+        |> genExpr e
+        |> map genExpr es
+        |> La rt0 (cls ++ "_dispTab")
+        |> Lw rt0 (i * 4) rt0
+        |> Jalr rt0
+        |> postCall
     _ -> trace (show expr) $ []
+
+preCall :: AssemblyCode
+preCall = push rfp
+    |> push ra0
+
+postCall :: AssemblyCode
+postCall = pop ra0
+    |> pop ra0
+    |> pop rfp
 
 

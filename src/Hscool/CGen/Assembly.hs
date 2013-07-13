@@ -30,6 +30,7 @@ data CodeLine = Comment String
               | Jr String
               | J String
               | Jalr String
+              | Jal String Int
               | Sw String Int String
               | Lw String Int String
               | Addiu String String Int
@@ -62,6 +63,7 @@ instance Show CodeLine where
         Jr r -> printf "jr %s" r
         J s -> printf "j %s" s
         Jalr r -> printf "jalr %s" r
+        Jal s i -> printf "jal %s + %d" s i
         Sw s o d -> printf "sw %s, %d(%s)" s o d
         Lw s o d -> printf "lw %s, %d(%s)" s o d
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
