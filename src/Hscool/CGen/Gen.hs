@@ -93,7 +93,41 @@ makeDispTable :: Class -> AssemblyCode
 makeDispTable (Class _ name _ _ meths) = Label (name ++ "_dispTab")
     |> map (\s -> Wordl s) meths
 
+{- calling conventions
+foo() {
+    ...
+ -> e.bar(e1, e2)
+    ...
+}
 
+    ######################### 0xffffffff
+    #        Static         #
+    #########################
+    #         Stack         # |
+    #         ....          # v
+    #         ....          #
+    # foo fp                #
+    # foo self              #
+    # e                     # <- bar fp
+    # e1                    #
+    # e2                    #
+    #                       #
+    #                       #
+    #                       #
+    #                       #
+    #                       #
+    .........................
+    .........................
+    #                       #
+    #                       #
+    #                       # ^
+    #                       # |
+    #        Heap           #
+    ######################### 0x00000000
+
+
+
+-}
 genFunc :: Method -> AssemblyCode
 genFunc (Method name nP nL e) = let
         frameSize = (nL + 1) * 4
