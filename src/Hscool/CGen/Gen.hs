@@ -3,6 +3,7 @@ module Hscool.CGen.Gen where
 import Hscool.CGen.Assembly
 import Hscool.CGen.Intermediate
 import Hscool.CGen.Preprocess(getIntLabel, getStringLabel, getBoolLabel)
+import Debug.Trace(trace)
 
 
 cgen :: Program -> AssemblyCode
@@ -126,8 +127,7 @@ foo() {
     #        Heap           #
     ######################### 0x00000000
 
-bar pop arguments
-
+bar pops arguments
 
 -}
 genFunc :: Method -> AssemblyCode
@@ -152,6 +152,8 @@ genExpr :: Expr -> AssemblyCode
 genExpr expr = case expr of
     Object S -> push ra0
     Object (C s) -> pushl s
+    Object (P i) -> Lw rt0 (-4 * i) rfp
+        |> push rt0
     Dispatch e i es -> push rfp
         |> push ra0
         |> genExpr e
@@ -163,6 +165,6 @@ genExpr expr = case expr of
         |> pop ra0
         |> pop ra0
         |> pop rfp
-    _ -> []
+    _ -> trace (show expr) $ []
 
 
