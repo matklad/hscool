@@ -31,8 +31,10 @@ data CodeLine = Comment String
               | J String
               | Jalr String
               | Jal String Int
+              | Beqz String String
               | Sw String Int String
               | Lw String Int String
+              | Lwl String String
               | Addiu String String Int
               | La String String
               | Move String String
@@ -64,8 +66,10 @@ instance Show CodeLine where
         J s -> printf "j %s" s
         Jalr r -> printf "jalr %s" r
         Jal s i -> printf "jal %s + %d" s i
+        Beqz s l -> printf "beqz %s, %s" s l
         Sw s o d -> printf "sw %s, %d(%s)" s o d
         Lw s o d -> printf "lw %s, %d(%s)" s o d
+        Lwl s l -> printf "lw %s, %s" s l
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
         La d imm -> printf "la %s, %s" d imm
         Move dest source -> printf "move %s, %s" dest source
@@ -138,6 +142,7 @@ lBoolTag = "_bool_tag"
 lStringTag = "_string_tag"
 lClassNameTab = "class_nameTab"
 lBoolConst0 = "bool_const0"
+lBoolConst1 = "bool_const1"
 lMemMgrInitializer = "_MemMgr_INITIALIZER"
 lMemMgrCollector = "_MemMgr_COLLECTOR"
 lHeapStart = "heap_start"
@@ -168,8 +173,11 @@ gcTag = Word (-1)
 -- registers
 
 ra0 = "$a0"
+ra1 = "$a1"
 rra = "$ra"
 rsp = "$sp"
 rfp = "$fp"
 rt0 = "$t0"
+rt1 = "$t1"
+rt2 = "$t2"
 rt9 = "$t9"

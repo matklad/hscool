@@ -72,3 +72,4 @@ Executable cgen
                    , array
                    , containers
                    , MissingH
+                   , mtl

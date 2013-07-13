@@ -4,7 +4,7 @@ import Hscool.CGen.Assembly
 import Hscool.CGen.Intermediate
 import Hscool.CGen.Preprocess(getIntLabel, getStringLabel, getBoolLabel)
 import Debug.Trace(trace)
-
+import Control.Monad.State
 
 cgen :: Program -> AssemblyCode
 cgen (Program classes meths intConsts strConsts) = let
@@ -134,12 +134,14 @@ genFunc :: Method -> AssemblyCode
 genFunc (Method name nP nL e) = let
         frameSize = (nP + nL + 1) * 4
         extendSize = (nL + 1) * 4
+        labels = [name ++ "_lable_" ++ show i | i <- [1..]]
+        ec = evalState (genExpr e) labels
     in
            Label name
         |> Sw rra 0 rsp
         |> Addiu rsp rsp (-extendSize)
         |> Addiu rfp rsp frameSize
-        |> genExpr e
+        |> ec
         |> Lw rra extendSize rsp
         |> Addiu rsp rsp frameSize
         |> Jr rra
@@ -148,31 +150,67 @@ findTag :: [Class] -> String -> Int
 findTag cls s = let [Class tag _ _ _ _] = [c | c@(Class _ name _ _ _) <- cls, name == s]
     in tag
 
-genExpr :: Expr -> AssemblyCode
+type LState = State [String]
+
+genExpr :: Expr -> LState AssemblyCode
 genExpr expr = case expr of
-    Object S -> push ra0
-    Object (C s) -> pushl s
-    Object (P i) -> Lw rt0 (-4 * i) rfp
+    Object S -> return $ push ra0
+    Object (C s) -> return $ pushl s
+    Object (P i) -> return $ Lw rt0 (-4 * i) rfp
         |> push rt0
     Assign S _ -> error "assigning to self!o_O"
     Assign (C _) _ -> error "assigning to const!O_o"
 
-    Dispatch e i es -> preCall
-        |> genExpr e
-        |> map genExpr es
-        |> Lw ra0 (4 * (1 + length es)) rsp
-        |> Lw rt0 8 ra0
-        |> Lw rt0 (i * 4) rt0
-        |> Jalr rt0
-        |> postCall
-    StaticDispatch e (cls, i) es -> preCall
-        |> genExpr e
-        |> map genExpr es
-        |> La rt0 (cls ++ "_dispTab")
-        |> Lw rt0 (i * 4) rt0
-        |> Jalr rt0
-        |> postCall
-    _ -> trace (show expr) $ []
+    Dispatch e i es -> do
+        ec <- genExpr e
+        esc <- mapM genExpr es
+        return $ preCall
+            |> ec
+            |> esc
+            |> Lw ra0 (4 * (1 + length es)) rsp
+            |> Lw rt0 8 ra0
+            |> Lw rt0 (i * 4) rt0
+            |> Jalr rt0
+                |> postCall
+    StaticDispatch e (cls, i) es -> do
+        ec <- genExpr e
+        esc <- mapM genExpr es
+        return $ preCall
+            |> ec
+            |> esc
+            |> La rt0 (cls ++ "_dispTab")
+            |> Lw rt0 (i * 4) rt0
+            |> Jalr rt0
+            |> postCall
+    Eq e1 e2 -> do
+        e1c <- genExpr e1
+        e2c <- genExpr e2
+        return $ e1c
+            |> pop rt1
+            |> e2c
+            |> pop rt2
+            |> push ra0
+            |> Lwl ra0 lBoolConst1
+            |> Lwl ra1 lBoolConst0
+            |> J lEqualityTest
+            |> pop rt0
+            |> push ra0
+            |> Move ra0 rt0
+    Cond e1 e2 e3 -> do
+        l1:l2:ls <- get
+        put ls
+        [e1c, e2c, e3c] <- mapM genExpr [e1, e2, e3]
+        return $ e1c
+            |> pop rt0
+            |> Lw rt0 12 rt0
+            |> Beqz rt0 l1
+            |> e2c
+            |> J l2
+            |> Label l1
+            |> e3c
+            |> Label l2
+
+    _ -> trace (show expr) $ return []
 
 preCall :: AssemblyCode
 preCall = push rfp
