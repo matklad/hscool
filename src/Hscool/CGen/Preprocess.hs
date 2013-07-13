@@ -70,7 +70,7 @@ preprocess (A.Program aClasses) = let
                 meths' = getInit c : meths
 
                 aux (A.Method n formals _ e) = let
-                        pMap = M.fromList [(p, P i) | (i, A.Formal p _) <- zip [1..] formals]
+                        pMap = M.fromList [(p, P i) | (i, A.Formal p _) <- zip [0..] formals]
                         objMap = pMap `M.union` M.fromList  (getAttrMap c)
                         (nLoc, e', is, ss) = prepExpr objMap 0 e
                         qualName = concat [name, if n == "_init" then "" else ".", n]

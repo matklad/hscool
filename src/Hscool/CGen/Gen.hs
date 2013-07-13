@@ -108,11 +108,12 @@ foo() {
     #         ....          #
     # foo fp                #
     # foo self              #
-    # e                     # <- bar fp
+    # e                     #
+    # e0                    # <- bar fp
     # e1                    #
-    # e2                    #
-    #                       #
-    #                       #
+    # return address        #
+    # loc0                  #
+    # loc1                  #
     #                       #
     #                       #
     #                       #
@@ -131,15 +132,16 @@ bar pop arguments
 -}
 genFunc :: Method -> AssemblyCode
 genFunc (Method name nP nL e) = let
-        frameSize = (nL + 1) * 4
-        popSize = nP * 4
+        frameSize = (nP + nL + 1) * 4
+        extendSize = (nL + 1) * 4
     in
            Label name
-        |> Addiu rsp rsp (-frameSize)
-        |> Sw rra frameSize rsp
+        |> Sw rra 0 rsp
+        |> Addiu rsp rsp (-extendSize)
+        |> Addiu rfp rsp frameSize
         |> genExpr e
-        |> Lw rra frameSize rsp
-        |> Addiu rsp rsp popSize
+        |> Lw rra extendSize rsp
+        |> Addiu rsp rsp frameSize
         |> Jr rra
 
 findTag :: [Class] -> String -> Int
