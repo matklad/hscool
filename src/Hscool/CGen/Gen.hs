@@ -175,7 +175,7 @@ genFunc (Method name nP nL e) = let
         frameSize = (nP + nL + 1) * 4
         extendSize = (nL + 1) * 4
         labels = [name ++ "_lable_" ++ show i | i <- [1..]]
-        ec = evalState (genExpr e) labels
+        ec = evalState (genExpr e) (labels, nP)
     in
            Label name
         |> Sw rra 0 rsp
@@ -191,7 +191,23 @@ findTag :: [Class] -> String -> Int
 findTag cls s = let [Class tag _ _ _ _] = [c | c@(Class _ name _ _ _) <- cls, name == s]
     in tag
 
-type LState = State [String]
+type LState = State ([String], Int)
+
+getLabels :: LState [String]
+getLabels = do
+    (labels, _) <- get
+    return labels
+
+putLabels :: [String] -> LState ()
+putLabels labels = do
+    (_, nP) <- get
+    put (labels, nP)
+
+getLocOff :: Int -> LState Int
+getLocOff i = do
+    (_, nP) <- get
+    return $ (i + nP + 1) * 4
+
 
 genExpr :: Expr -> LState AssemblyCode
 genExpr expr = case expr of
@@ -199,8 +215,23 @@ genExpr expr = case expr of
     Object (C s) -> return $ pushl s
     Object (P i) -> return $ Lw rt0 (-4 * i) rfp
         |> push rt0
+    Object (L i) -> do
+        off <- getLocOff i
+        return $ Lw rt0 (-off) rfp
+            |> push rt0
     Assign S _ -> error "assigning to self!o_O"
     Assign (C _) _ -> error "assigning to const!O_o"
+    Assign (P i) e -> do
+        ec <- genExpr e
+        return $ ec
+            |> Lw rt0 4 rsp
+            |> Sw rt0 (-4 * i) rfp
+    Assign (L i) e -> do
+        ec <- genExpr e
+        off <- getLocOff i
+        return $ ec
+            |> Lw rt0 4 rsp
+            |> Sw rt0 (-off) rfp
 
     Dispatch e i es -> do
         ec <- genExpr e
@@ -224,9 +255,10 @@ genExpr expr = case expr of
             |> Jalr rt0
             |> postCall
     Minus e1 e2 -> arith Subu e1 e2
+    Add e1 e2 -> arith Addu e1 e2
     Eq e1 e2 -> do
-        l1:l2:ls <- get
-        put ls
+        l1:l2:ls <- getLabels
+        putLabels ls
         e1c <- genExpr e1
         e2c <- genExpr e2
         return $ e1c
@@ -247,8 +279,8 @@ genExpr expr = case expr of
             |> push rt0
             |> Label l2
     Cond e1 e2 e3 -> do
-        l1:l2:ls <- get
-        put ls
+        l1:l2:ls <- getLabels
+        putLabels ls
         [e1c, e2c, e3c] <- mapM genExpr [e1, e2, e3]
         return $ e1c
             |> pop rt0

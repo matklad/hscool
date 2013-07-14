@@ -93,47 +93,6 @@ popn = [Addiu rsp rsp 4]
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 -- .global
 lMainProtObj = "Main_protObj"
 lMainInit = "Main_init"

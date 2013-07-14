@@ -60,12 +60,26 @@ preprocess (A.Program aClasses) = let
                 aux e = case e of
                     A.Expr _ A.NoExpr -> Nothing
                     _ -> Just e
+                assignDefault (n, t) = (\e -> A.Expr t (A.Assign n (A.Expr t e))) <$>
+                    case () of _
+                                | t == "Int" ->
+                                    Just $ A.IntConst "0"
+                                | t == "String" ->
+                                    Just $ A.StringConst ""
+                                | t == "Bool" ->
+                                    Just $ A.BoolConst False
+                                | otherwise -> Nothing
+
+                defaults = catMaybes . map assignDefault $ [(n, t) | (A.Attribute n t _) <- attrs]
                 inits = (catMaybes [A.Expr t <$> (A.Assign n <$> aux e)| (A.Attribute n t e) <- attrs])
                         ++ [A.Expr "SELF_TYPE" $ A.Object "self"]
+
+                dinits = defaults ++ inits
                 superCall = A.Expr "Object" $ A.StaticDispatch (A.Expr "Object" (A.Object "self")) super "_init" []
+
                 inits' = if name /= "Object"
-                         then superCall : inits
-                         else inits
+                         then superCall : dinits
+                         else dinits
             in
                 A.Method "_init" [] "Object" $ A.Expr "Object" $ A.Block inits'
 
@@ -127,10 +141,10 @@ preprocess (A.Program aClasses) = let
                         A.Let s _ e1 e2 -> let
                                 (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
                                 nLoc' = succ nLoc
-                                objMap' = M.insert s (L nLoc') objMap
+                                objMap' = M.insert s (L nLoc) objMap
                                 (nLoc2, e2', is2, ss2) = prepExpr objMap' nLoc' e2
                             in
-                                (maximum [nLoc1, nLoc2], Block [Assign (L nLoc') e1', e2'], is1 ++ is2, ss1 ++ ss2)
+                                (maximum [nLoc1, nLoc2], Block [Assign (L nLoc) e1', e2'], is1 ++ is2, ss1 ++ ss2)
                         A.Add e1 e2 -> let
                                 (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
                                 (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
