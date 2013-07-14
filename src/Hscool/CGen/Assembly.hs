@@ -32,9 +32,9 @@ data CodeLine = Comment String
               | Jalr String
               | Jal String Int
               | Beqz String String
+              | Beq String String String
               | Sw String Int String
               | Lw String Int String
-              | Lwl String String
               | Addiu String String Int
               | La String String
               | Move String String
@@ -67,9 +67,9 @@ instance Show CodeLine where
         Jalr r -> printf "jalr %s" r
         Jal s i -> printf "jal %s + %d" s i
         Beqz s l -> printf "beqz %s, %s" s l
+        Beq r1 r2 l -> printf "beq %s, %s, %s" r1 r2 l
         Sw s o d -> printf "sw %s, %d(%s)" s o d
         Lw s o d -> printf "lw %s, %d(%s)" s o d
-        Lwl s l -> printf "lw %s, %s" s l
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
         La d imm -> printf "la %s, %s" d imm
         Move dest source -> printf "move %s, %s" dest source

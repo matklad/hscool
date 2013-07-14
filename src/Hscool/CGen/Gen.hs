@@ -21,8 +21,8 @@ cgen (Program classes meths intConsts strConsts) = let
             |> Word strTag
             |> Label lBoolTag
             |> Word boolTag
-        consts = map (makeIntConst strTag) intConsts
-            |> map (makeStrConst intTag) strConsts
+        consts = map (makeIntConst intTag) intConsts
+            |> map (makeStrConst strTag) strConsts
             |> map (makeBoolConst boolTag) [False, True]
     in
            Data
@@ -186,19 +186,28 @@ genExpr expr = case expr of
             |> Jalr rt0
             |> postCall
     Eq e1 e2 -> do
+        l1:l2:ls <- get
+        put ls
         e1c <- genExpr e1
         e2c <- genExpr e2
         return $ e1c
-            |> pop rt1
             |> e2c
             |> pop rt2
+            |> pop rt1
+            |> Beq rt1 rt2 l1
             |> push ra0
-            |> Lwl ra0 lBoolConst1
-            |> Lwl ra1 lBoolConst0
-            |> J lEqualityTest
+            |> La ra0 lBoolConst1
+            |> La ra1 lBoolConst0
+            |> La rt0 lEqualityTest
+            |> Jalr rt0
             |> pop rt0
             |> push ra0
             |> Move ra0 rt0
+            |> J l2
+            |> Label l1
+            |> La rt0 lBoolConst1
+            |> push rt0
+            |> Label l2
     Cond e1 e2 e3 -> do
         l1:l2:ls <- get
         put ls
@@ -227,5 +236,3 @@ postCall = Move rt0 ra0
     |> pop ra0
     |> pop rfp
     |> push rt0
-
-
