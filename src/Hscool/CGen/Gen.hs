@@ -36,6 +36,8 @@ cgen (Program classes meths intConsts strConsts) = let
         |> Comment "Tables"
         |> tables
         |> Comment "THE CODEZ"
+        |> Label lHeapStart
+        |> Word 0
         |> Text
         |> funcs
 
@@ -43,6 +45,14 @@ globalLabels :: AssemblyCode
 globalLabels = Global lMainProtObj
     |> Global lMainInit
     |> Global lMainMain
+    |> Global lIntProtObj
+    |> Global lIntInit
+    |> Global lStringProtObj
+    |> Global lStringInit
+    |> Global lIntTag
+    |> Global lBoolTag
+    |> Global lStringTag
+    |> Global lBoolConst0
     |> Global lMemMgrInitializer
     |> Global lMemMgrCollector
     |> Global lHeapStart
@@ -55,31 +65,59 @@ memMGR = Label lMemMgrCollector
     |> Wordl lNoGCInit
     |> Label lMemMgrTest
     |> Word 0
-    |> Label lHeapStart
-    |> Word 0
 
 genObjectProto :: Class -> AssemblyCode
-genObjectProto (Class tag name _ n_atts _) = gcTag
-    |> Label (name ++ "_protObj")
+genObjectProto (Class tag name _ n_atts _) =
+    case () of _
+                | name == "Int" -> intProto tag
+                | name == "Bool" -> boolProto tag
+                | name == "String" -> strProto tag
+                | otherwise -> gcTag
+                            |> Label (name ++ "_protObj")
+                            |> Word tag
+                            |> Word (3 + n_atts)
+                            |> Wordl (name ++ "_dispTab")
+                            |> [Word 0 | _ <- [1..n_atts]]
+
+intProto :: Int -> AssemblyCode
+intProto tag = gcTag
+    |> Label lIntProtObj
     |> Word tag
-    |> Word (3 + n_atts)
-    |> Wordl (name ++ "_dispTab")
-    |> [Word 0 | _ <- [1..n_atts]]
+    |> Word 4
+    |> Wordl lIntDispTab
+    |> Word 0
+
+strProto :: Int -> AssemblyCode
+strProto tag = gcTag
+    |> Label lStringProtObj
+    |> Word tag
+    |> Word 5
+    |> Wordl lStringDispTab
+    |> Wordl lIntProtObj
+    |> Asciiz ""
+
+boolProto :: Int -> AssemblyCode
+boolProto tag = gcTag
+    |> Label lBoolProtObj
+    |> Word tag
+    |> Word 4
+    |> Wordl lBoolDispTab
+    |> Word 0
 
 makeIntConst :: Int -> String -> AssemblyCode
 makeIntConst tag s = gcTag
     |> Label (getIntLabel s)
     |> Word tag
     |> Word 4
-    |> Wordl "Int_dispTab"
+    |> Wordl lIntDispTab
     |> Word (read s)
 
 makeStrConst :: Int -> String -> AssemblyCode
 makeStrConst tag s = gcTag
     |> Label (getStringLabel s)
     |> Word tag
-    |> Word (3 + length s `div` 4)
-    |> Wordl "String_dispTab"
+    |> Word 5
+    |> Wordl lStringDispTab
     |> Wordl (getIntLabel . show . length $ s)
     |> Asciiz s
 
@@ -88,7 +126,7 @@ makeBoolConst tag b = gcTag
     |> Label (getBoolLabel b)
     |> Word tag
     |> Word 4
-    |> Wordl "Bool_dispTab"
+    |> Wordl lBoolDispTab
     |> Word (if b then 1 else 0)
 
 makeDispTable :: Class -> AssemblyCode
@@ -171,7 +209,7 @@ genExpr expr = case expr of
             |> ec
             |> esc
             |> Lw ra0 (4 * (1 + length es)) rsp
-            |> Lw rt0 8 ra0
+            |> Lw rt0 dispOff ra0
             |> Lw rt0 (i * 4) rt0
             |> Jalr rt0
             |> postCall
@@ -185,6 +223,7 @@ genExpr expr = case expr of
             |> Lw rt0 (i * 4) rt0
             |> Jalr rt0
             |> postCall
+    Minus e1 e2 -> arith Subu e1 e2
     Eq e1 e2 -> do
         l1:l2:ls <- get
         put ls
@@ -198,8 +237,7 @@ genExpr expr = case expr of
             |> push ra0
             |> La ra0 lBoolConst1
             |> La ra1 lBoolConst0
-            |> La rt0 lEqualityTest
-            |> Jalr rt0
+            |> Jal lEqualityTest
             |> pop rt0
             |> push ra0
             |> Move ra0 rt0
@@ -214,7 +252,7 @@ genExpr expr = case expr of
         [e1c, e2c, e3c] <- mapM genExpr [e1, e2, e3]
         return $ e1c
             |> pop rt0
-            |> Lw rt0 12 rt0
+            |> Lw rt0 attr1Off rt0
             |> Beqz rt0 l1
             |> e2c
             |> J l2
@@ -236,3 +274,55 @@ postCall = Move rt0 ra0
     |> pop ra0
     |> pop rfp
     |> push rt0
+    |> Comment "End call"
+
+arith :: (String -> String -> String -> CodeLine) -> Expr -> Expr -> LState AssemblyCode
+arith op e1 e2 = let
+        load r = pop r
+            |> Lw r attr1Off r
+    in
+        do
+            e1c <- genExpr e1
+            e2c <- genExpr e2
+            return $ push ra0
+                |> e2c
+                |> e1c
+                |> La ra0 lIntProtObj
+                |> Jal lObjectCopy
+                |> load rt1
+                |> load rt2
+                |> op rt0 rt1 rt2
+                |> Sw rt0 attr1Off ra0
+                |> pop rt0
+                |> push ra0
+                |> Move ra0 rt0
+
+
+
+dispOff :: Int
+dispOff = 8
+attr1Off :: Int
+attr1Off = 12
+attr2Off :: Int
+attr2Off = 16
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

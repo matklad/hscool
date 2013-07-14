@@ -9,7 +9,6 @@ class Code a where
 (|>) :: (Code x, Code y) => x -> y -> AssemblyCode
 a |> b = toAsm a `mappend` toAsm b
 
-
 type AssemblyCode = [CodeLine]
 
 instance Code AssemblyCode where
@@ -30,12 +29,14 @@ data CodeLine = Comment String
               | Jr String
               | J String
               | Jalr String
-              | Jal String Int
+              | Jal String
               | Beqz String String
               | Beq String String String
               | Sw String Int String
               | Lw String Int String
               | Addiu String String Int
+              | Subu String String String
+              | Addu String String String
               | La String String
               | Move String String
 
@@ -65,12 +66,14 @@ instance Show CodeLine where
         Jr r -> printf "jr %s" r
         J s -> printf "j %s" s
         Jalr r -> printf "jalr %s" r
-        Jal s i -> printf "jal %s + %d" s i
+        Jal s -> printf "jal %s" s
         Beqz s l -> printf "beqz %s, %s" s l
         Beq r1 r2 l -> printf "beq %s, %s, %s" r1 r2 l
         Sw s o d -> printf "sw %s, %d(%s)" s o d
         Lw s o d -> printf "lw %s, %d(%s)" s o d
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
+        Subu rd r1 r2 -> printf "subu %s, %s, %s" rd r1 r2
+        Addu rd r1 r2 -> printf "addu %s, %s, %s" rd r1 r2
         La d imm -> printf "la %s, %s" d imm
         Move dest source -> printf "move %s, %s" dest source
 
@@ -168,6 +171,12 @@ lCaseAbort = "_case_abort"
 lCaseAbort2 = "_case_abort2"
 lNoGCInit = "_NoGC_Init"
 lNoGCCollect = "_NoGC_Collect"
+
+-- other
+lBoolProtObj = "Bool_protObj"
+lBoolDispTab = "Bool_dispTab"
+lIntDispTab = "Int_dispTab"
+lStringDispTab = "String_dispTab"
 
 -- Tags
 gcTag = Word (-1)
