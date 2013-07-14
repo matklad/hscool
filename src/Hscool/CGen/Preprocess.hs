@@ -8,6 +8,7 @@ import           Data.Maybe               (catMaybes, fromMaybe)
 import           Hscool.CGen.Intermediate
 import qualified Hscool.Types.AST         as A
 import Data.Char(isAlphaNum)
+import Data.List(nub)
 
 
 preprocess :: A.TProgram -> Program
@@ -16,8 +17,8 @@ preprocess (A.Program aClasses) = let
         classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses'] M.!)
         classes = zipWith (curry getClass) [0..] aClasses'
         (methods', ints', strings') = unzip3 . map getMethods $ aClasses'
-        ints = concat ints'
-        strings = concat strings'
+        ints = nub $ concat ints'
+        strings = nub $ concat strings'
 
         methods = filter
             (\(Method name _ _ _) ->  (name `notElem` ["String.length", "String.substr", "String.concat",
@@ -57,7 +58,8 @@ preprocess (A.Program aClasses) = let
                 aux e = case e of
                     A.Expr _ A.NoExpr -> Nothing
                     _ -> Just e
-                inits = catMaybes [A.Expr t <$> (A.Assign n <$> aux e)| (A.Attribute n t e) <- attrs]
+                inits = (catMaybes [A.Expr t <$> (A.Assign n <$> aux e)| (A.Attribute n t e) <- attrs])
+                        ++ [A.Expr "SELF_TYPE" $ A.Object "self"]
                 superCall = A.Expr "Object" $ A.StaticDispatch (A.Expr "Object" (A.Object "self")) super "_init" []
                 inits' = if name /= "Object"
                          then superCall : inits

@@ -84,6 +84,8 @@ pushl l = La rt9 l |> push rt9
 pop :: String -> AssemblyCode
 pop r = Addiu rsp rsp 4 |> Lw r 0 rsp
 
+popn :: AssemblyCode
+popn = [Addiu rsp rsp 4]
 
 
 

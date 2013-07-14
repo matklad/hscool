@@ -5,6 +5,7 @@ import Hscool.CGen.Intermediate
 import Hscool.CGen.Preprocess(getIntLabel, getStringLabel, getBoolLabel)
 import Debug.Trace(trace)
 import Control.Monad.State
+import Data.List(intersperse)
 
 cgen :: Program -> AssemblyCode
 cgen (Program classes meths intConsts strConsts) = let
@@ -128,7 +129,8 @@ foo() {
     ######################### 0x00000000
 
 bar pops arguments
-
+a0 holds self on entry
+a0 holds ret on exit
 -}
 genFunc :: Method -> AssemblyCode
 genFunc (Method name nP nL e) = let
@@ -142,6 +144,7 @@ genFunc (Method name nP nL e) = let
         |> Addiu rsp rsp (-extendSize)
         |> Addiu rfp rsp frameSize
         |> ec
+        |> pop ra0
         |> Lw rra extendSize rsp
         |> Addiu rsp rsp frameSize
         |> Jr rra
@@ -171,7 +174,7 @@ genExpr expr = case expr of
             |> Lw rt0 8 ra0
             |> Lw rt0 (i * 4) rt0
             |> Jalr rt0
-                |> postCall
+            |> postCall
     StaticDispatch e (cls, i) es -> do
         ec <- genExpr e
         esc <- mapM genExpr es
@@ -209,7 +212,9 @@ genExpr expr = case expr of
             |> Label l1
             |> e3c
             |> Label l2
-
+    Block es -> do
+        ecs <- mapM genExpr es
+        return .toAsm $ intersperse popn ecs
     _ -> trace (show expr) $ return []
 
 preCall :: AssemblyCode
@@ -217,8 +222,10 @@ preCall = push rfp
     |> push ra0
 
 postCall :: AssemblyCode
-postCall = pop ra0
+postCall = Move rt0 ra0
+    |> popn
     |> pop ra0
     |> pop rfp
+    |> push rt0
 
 
