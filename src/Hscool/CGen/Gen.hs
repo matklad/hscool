@@ -80,7 +80,7 @@ makeStrConst tag s = gcTag
     |> Word tag
     |> Word (3 + length s `div` 4)
     |> Wordl "String_dispTab"
-    |> Word (length s)
+    |> Wordl (getIntLabel . show . length $ s)
     |> Asciiz s
 
 makeBoolConst :: Int -> Bool -> AssemblyCode

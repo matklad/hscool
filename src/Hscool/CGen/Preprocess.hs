@@ -1,14 +1,16 @@
 module Hscool.CGen.Preprocess where
 
 import           Control.Applicative      ((<$>))
+import           Data.Char                (isAlphaNum)
+import           Data.Hashable
 import           Data.List                (findIndex, unzip4)
+import           Data.List                (nub)
 import           Data.List.Utils          (replace)
 import qualified Data.Map                 as M
 import           Data.Maybe               (catMaybes, fromMaybe)
 import           Hscool.CGen.Intermediate
 import qualified Hscool.Types.AST         as A
-import Data.Char(isAlphaNum)
-import Data.List(nub)
+import           Text.Printf              (printf)
 
 
 preprocess :: A.TProgram -> Program
@@ -17,8 +19,8 @@ preprocess (A.Program aClasses) = let
         classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses'] M.!)
         classes = zipWith (curry getClass) [0..] aClasses'
         (methods', ints', strings') = unzip3 . map getMethods $ aClasses'
-        ints = nub $ concat ints'
         strings = nub $ concat strings'
+        ints = nub $ concat (map (show.length) strings : ints')
 
         methods = filter
             (\(Method name _ _ _) ->  (name `notElem` ["String.length", "String.substr", "String.concat",
@@ -196,8 +198,11 @@ preprocess (A.Program aClasses) = let
 
 getIntLabel :: String -> String
 getIntLabel s = "int_const_" ++ s
+
 getStringLabel :: String -> String
-getStringLabel s = "str_const_" ++ (filter isAlphaNum s)
+getStringLabel s = let h = hash s `mod` 10000 in
+    printf "str_const_%s_%d" (filter isAlphaNum s) h
+
 getBoolLabel :: Bool -> String
 getBoolLabel b = if b
     then "bool_const1"
