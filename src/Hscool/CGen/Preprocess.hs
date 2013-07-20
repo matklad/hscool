@@ -19,7 +19,7 @@ preprocess (A.Program aClasses) = let
         classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses'] M.!)
         classes = zipWith (curry getClass) [0..] aClasses'
         (methods', ints', strings') = unzip3 . map getMethods $ aClasses'
-        strings = nub $ concat strings'
+        strings = nub $ concat ([n |(A.Class n _ _ _) <- aClasses']:strings')
         ints = nub $ concat (map (show.length) strings : ints')
 
         methods = filter
@@ -33,7 +33,7 @@ preprocess (A.Program aClasses) = let
                 m' = if name /= "Object"
                      then getAttrMap $ classMap super
                      else []
-                m = [(n, A i)|(i, A.Attribute n _ _) <- zip [1 + length m'..] attrs]
+                m = [(n, A i)|(i, A.Attribute n _ _) <- zip [0 + length m'..] attrs]
             in
                 m' ++ m
 

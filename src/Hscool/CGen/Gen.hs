@@ -12,6 +12,7 @@ cgen (Program classes meths intConsts strConsts) = let
         protos = map genObjectProto classes
         funcs = map genFunc meths
         tables = map makeDispTable classes
+            |> classNameTab classes
         intTag = findTag classes "Int"
         strTag = findTag classes "String"
         boolTag = findTag classes "Bool"
@@ -73,11 +74,14 @@ genObjectProto (Class tag name _ n_atts _) =
                 | name == "Bool" -> boolProto tag
                 | name == "String" -> strProto tag
                 | otherwise -> gcTag
-                            |> Label (name ++ "_protObj")
+                            |> Label (protLabel name)
                             |> Word tag
                             |> Word (3 + n_atts)
                             |> Wordl (name ++ "_dispTab")
                             |> [Word 0 | _ <- [1..n_atts]]
+
+protLabel :: String -> String
+protLabel name = name ++ "_protObj"
 
 intProto :: Int -> AssemblyCode
 intProto tag = gcTag
@@ -132,6 +136,10 @@ makeBoolConst tag b = gcTag
 makeDispTable :: Class -> AssemblyCode
 makeDispTable (Class _ name _ _ meths) = Label (name ++ "_dispTab")
     |> map Wordl meths
+
+classNameTab :: [Class] -> AssemblyCode
+classNameTab classes = Label lClassNameTab
+    |> [ Wordl $ getStringLabel n| (Class _ n _ _ _) <- classes]
 
 {- calling conventions
 foo() {
@@ -208,12 +216,16 @@ getLocOff i = do
     (_, nP) <- get
     return $ (i + nP + 1) * 4
 
+attrOff :: Int -> Int
+attrOff i = (i + 12) * 4
 
 genExpr :: Expr -> LState AssemblyCode
 genExpr expr = case expr of
     Object S -> return $ push ra0
     Object (C s) -> return $ pushl s
     Object (P i) -> return $ Lw rt0 (-4 * i) rfp
+        |> push rt0
+    Object (A i) -> return $ Lw rt0 (attrOff i) ra0
         |> push rt0
     Object (L i) -> do
         off <- getLocOff i
@@ -225,7 +237,12 @@ genExpr expr = case expr of
         ec <- genExpr e
         return $ ec
             |> Lw rt0 4 rsp
-            |> Sw rt0 (-4 * i) rfp
+            |> Sw rt0 (attrOff i) ra0
+    Assign (A i) e -> do
+        ec <- genExpr e
+        return $ ec
+            |> Lw rt0 4 rsp
+            |> Sw rt0 (attrOff i) ra0
     Assign (L i) e -> do
         ec <- genExpr e
         off <- getLocOff i
@@ -294,6 +311,26 @@ genExpr expr = case expr of
     Block es -> do
         ecs <- mapM genExpr es
         return .toAsm $ intersperse popn ecs
+    New s -> return $ push ra0
+        |> La ra0 (protLabel s)
+        |> Jal lObjectCopy
+        |> pop rt0
+        |> push ra0
+        |> Move ra0 rt0
+
+    IsVoid e -> do
+        ec <- genExpr e
+        l1:l2:ls <- getLabels
+        putLabels ls
+        return $ ec
+            |> pop rt0
+            |> Beqz rt0 l1
+            |> pushl lBoolConst0
+            |> J l2
+            |> Label l1
+            |> pushl lBoolConst1
+            |> Label l2
+
     _ -> trace (show expr) $ return []
 
 preCall :: AssemblyCode
