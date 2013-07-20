@@ -33,12 +33,15 @@ data CodeLine = Comment String
               | Beqz String String
               | Beq String String String
               | Blt String String String
+              | Ble String String String
               | Sw String Int String
               | Lw String Int String
               | Li String Int
               | Addiu String String Int
               | Subu String String String
               | Addu String String String
+              | Mulu String String String
+              | Divu String String String
               | Negu String String
               | La String String
               | Move String String
@@ -73,12 +76,15 @@ instance Show CodeLine where
         Beqz s l -> printf "beqz %s, %s" s l
         Beq r1 r2 l -> printf "beq %s, %s, %s" r1 r2 l
         Blt r1 r2 l -> printf "blt %s, %s, %s" r1 r2 l
+        Ble r1 r2 l -> printf "ble %s, %s, %s" r1 r2 l
         Sw s o d -> printf "sw %s, %d(%s)" s o d
         Lw s o d -> printf "lw %s, %d(%s)" s o d
         Li r imm -> printf "li %s, %d" r imm
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
         Subu rd r1 r2 -> printf "subu %s, %s, %s" rd r1 r2
         Addu rd r1 r2 -> printf "addu %s, %s, %s" rd r1 r2
+        Mulu rd r1 r2 -> printf "mul %s, %s, %s" rd r1 r2
+        Divu rd r1 r2 -> printf "divu %s, %s, %s" rd r1 r2
         Negu d s -> printf "negu %s, %s" d s
         La d imm -> printf "la %s, %s" d imm
         Move dest source -> printf "move %s, %s" dest source

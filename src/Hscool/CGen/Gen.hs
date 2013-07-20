@@ -271,12 +271,15 @@ genExpr expr = case expr of
         return $ preCall
             |> ec
             |> esc
+            |> Lw ra0 (4 * (1 + length es)) rsp
             |> La rt0 (cls ++ "_dispTab")
             |> Lw rt0 (i * 4) rt0
             |> Jalr rt0
             |> postCall
     Minus e1 e2 -> arith Subu e1 e2
     Add e1 e2 -> arith Addu e1 e2
+    Mul e1 e2 -> arith Mulu e1 e2
+    Div e1 e2 -> arith Divu e1 e2
     Neg e -> do
         ec <- genExpr e
         return $ push ra0
@@ -307,22 +310,8 @@ genExpr expr = case expr of
             |> La rt0 lBoolConst1
             |> push rt0
             |> Label l2
-    Le e1 e2 -> do
-        l1:l2:ls <- getLabels
-        putLabels ls
-        e1c <- genExpr e1
-        e2c <- genExpr e2
-        return $ e1c
-            |> e2c
-            |> loadAttr rt2
-            |> loadAttr rt1
-            |> Blt rt1 rt2 l1
-            |> La rt0 lBoolConst0
-            |> J l2
-            |> Label l1
-            |> La rt0 lBoolConst1
-            |> Label l2
-            |> push rt0
+    Le e1 e2 -> comp Blt e1 e2
+    Leq e1 e2 -> comp Ble e1 e2
 
     Cond e1 e2 e3 -> do
         l1:l2:ls <- getLabels
@@ -400,6 +389,24 @@ arith op e1 e2 = do
         |> op rt0 rt1 rt2
         |> Sw rt0 attr1Off ra0
         |> swapra0
+
+comp :: (String -> String -> String -> CodeLine) -> Expr -> Expr -> LState AssemblyCode
+comp op e1 e2 = do
+    l1:l2:ls <- getLabels
+    putLabels ls
+    e1c <- genExpr e1
+    e2c <- genExpr e2
+    return $ e1c
+        |> e2c
+        |> loadAttr rt2
+        |> loadAttr rt1
+        |> op rt1 rt2 l1
+        |> La rt0 lBoolConst0
+        |> J l2
+        |> Label l1
+        |> La rt0 lBoolConst1
+        |> Label l2
+        |> push rt0
 
 loadAttr :: String -> AssemblyCode
 loadAttr r = pop r
