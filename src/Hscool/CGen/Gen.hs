@@ -2,7 +2,7 @@ module Hscool.CGen.Gen where
 
 import Hscool.CGen.Assembly
 import Hscool.CGen.Intermediate
-import Hscool.CGen.Preprocess(getIntLabel, getStringLabel, getBoolLabel)
+import Hscool.CGen.Preprocess(getIntLabel, getStringLabel, getBoolLabel, voidLabel)
 import Debug.Trace(trace)
 import Control.Monad.State
 import Data.List(intersperse)
@@ -25,6 +25,7 @@ cgen (Program classes meths intConsts strConsts) = let
         consts = map (makeIntConst intTag) intConsts
             |> map (makeStrConst strTag) strConsts
             |> map (makeBoolConst boolTag) [False, True]
+        voidObj = Label voidLabel |> Word 0
     in
            Data
         |> globalLabels
@@ -32,6 +33,7 @@ cgen (Program classes meths intConsts strConsts) = let
         |> memMGR
         |> Comment "PROTOS"
         |> protos
+        |> voidObj
         |> Comment "CONSTS"
         |> consts
         |> Comment "Tables"
@@ -122,7 +124,7 @@ makeStrConst :: Int -> String -> AssemblyCode
 makeStrConst tag s = gcTag
     |> Label (getStringLabel s)
     |> Word tag
-    |> Word 5
+    |> Word (5 + (length s `div` 4))
     |> Wordl lStringDispTab
     |> Wordl (getIntLabel . show . length $ s)
     |> Asciiz s
@@ -369,8 +371,7 @@ genExpr expr = case expr of
             |> popn
             |> J l1
             |> Label l2
-            |> Li rt0 0
-            |> push rt0
+            |> pushl voidLabel
 
     _ -> trace (show expr) $ return []
 

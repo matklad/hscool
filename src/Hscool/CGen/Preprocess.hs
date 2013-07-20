@@ -3,15 +3,13 @@ module Hscool.CGen.Preprocess where
 import           Control.Applicative      ((<$>))
 import           Data.Char                (isAlphaNum)
 import           Data.Hashable
-import           Data.List                (findIndex, unzip4)
-import           Data.List                (nub)
+import           Data.List                (findIndex, unzip4, nub)
 import           Data.List.Utils          (replace)
 import qualified Data.Map                 as M
 import           Data.Maybe               (catMaybes, fromMaybe)
 import           Hscool.CGen.Intermediate
 import qualified Hscool.Types.AST         as A
 import           Text.Printf              (printf)
-import Debug.Trace(trace)
 
 preprocess :: A.TProgram -> Program
 preprocess (A.Program aClasses) = let
@@ -19,8 +17,8 @@ preprocess (A.Program aClasses) = let
         classMap = (M.fromList [(n, c) | c@(A.Class n _ _ _) <- aClasses'] M.!)
         classes = zipWith (curry getClass) [0..] aClasses'
         (methods', ints', strings') = unzip3 . map getMethods $ aClasses'
-        strings = nub $ concat ([n |(A.Class n _ _ _) <- aClasses']:strings')
-        ints = nub $ concat (map (show.length) strings : ints')
+        strings = nub $ concat ([n |(A.Class n _ _ _) <- aClasses']:[""]:strings')
+        ints = nub $ concat (map (show.length) strings :["0"]: ints')
 
         methods = filter
             (\(Method name _ _ _) ->  (name `notElem` ["String.length", "String.substr", "String.concat",
@@ -60,7 +58,7 @@ preprocess (A.Program aClasses) = let
                 aux e = case e of
                     A.Expr _ A.NoExpr -> Nothing
                     _ -> Just e
-                assignDefault (n, t) = (\e -> A.Expr t (A.Assign n (A.Expr t e))) <$>
+                assignDefault (n, t) = (A.Expr t . A.Assign n . A.Expr t) <$>
                     case () of _
                                 | t == "Int" ->
                                     Just $ A.IntConst "0"
@@ -138,8 +136,18 @@ preprocess (A.Program aClasses) = let
                                 (nLocs, es', iss, sss) = unzip4 . map (prepExpr objMap nLoc) $ es
                             in
                                 (maximum $ nLoc : nLocs, Block es', concat iss, concat sss)
-                        A.Let s _ e1 e2 -> let
-                                (nLoc1, e1', is1, ss1) = prepExpr objMap nLoc e1
+                        A.Let s t e1 e2 -> let
+                                (nLoc1, e1'', is1, ss1) = prepExpr objMap nLoc e1
+                                e1' = case e1 of
+                                    A.Expr _ A.NoExpr ->
+                                        let c = case () of _
+                                                            | t == "Int" -> getIntLabel "0"
+                                                            | t == "String" -> getStringLabel ""
+                                                            | t == "Bool" -> getBoolLabel False
+                                                            | otherwise -> voidLabel
+                                        in
+                                            Object (C c)
+                                    _ -> e1''
                                 nLoc' = succ nLoc
                                 objMap' = M.insert s (L nLoc) objMap
                                 (nLoc2, e2', is2, ss2) = prepExpr objMap' nLoc' e2
@@ -221,6 +229,9 @@ getBoolLabel :: Bool -> String
 getBoolLabel b = if b
     then "bool_const1"
     else "bool_const0"
+
+voidLabel :: String
+voidLabel = "void_obj"
 
 extractFeatures :: A.TClass -> ([A.TFeature], [A.TFeature])
 extractFeatures (A.Class _ _ features _) = let
