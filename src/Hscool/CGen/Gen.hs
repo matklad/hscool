@@ -305,6 +305,23 @@ genExpr expr = case expr of
             |> La rt0 lBoolConst1
             |> push rt0
             |> Label l2
+    Le e1 e2 -> do
+        l1:l2:ls <- getLabels
+        putLabels ls
+        e1c <- genExpr e1
+        e2c <- genExpr e2
+        return $ e1c
+            |> e2c
+            |> loadAttr rt2
+            |> loadAttr rt1
+            |> Blt rt1 rt2 l1
+            |> La rt0 lBoolConst0
+            |> J l2
+            |> Label l1
+            |> La rt0 lBoolConst1
+            |> Label l2
+            |> push rt0
+
     Cond e1 e2 e3 -> do
         l1:l2:ls <- getLabels
         putLabels ls
@@ -339,6 +356,21 @@ genExpr expr = case expr of
             |> Label l1
             |> pushl lBoolConst1
             |> Label l2
+    Loop e1 e2 -> do
+        [e1c, e2c] <- mapM genExpr [e1, e2]
+        l1:l2:ls <- getLabels
+        putLabels ls
+        return $ Label l1
+            |> e1c
+            |> pop rt0
+            |> Lw rt0 attr1Off rt0
+            |> Beqz rt0 l2
+            |> e2c
+            |> popn
+            |> J l1
+            |> Label l2
+            |> Li rt0 0
+            |> push rt0
 
     _ -> trace (show expr) $ return []
 

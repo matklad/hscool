@@ -32,8 +32,10 @@ data CodeLine = Comment String
               | Jal String
               | Beqz String String
               | Beq String String String
+              | Blt String String String
               | Sw String Int String
               | Lw String Int String
+              | Li String Int
               | Addiu String String Int
               | Subu String String String
               | Addu String String String
@@ -70,8 +72,10 @@ instance Show CodeLine where
         Jal s -> printf "jal %s" s
         Beqz s l -> printf "beqz %s, %s" s l
         Beq r1 r2 l -> printf "beq %s, %s, %s" r1 r2 l
+        Blt r1 r2 l -> printf "blt %s, %s, %s" r1 r2 l
         Sw s o d -> printf "sw %s, %d(%s)" s o d
         Lw s o d -> printf "lw %s, %d(%s)" s o d
+        Li r imm -> printf "li %s, %d" r imm
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
         Subu rd r1 r2 -> printf "subu %s, %s, %s" rd r1 r2
         Addu rd r1 r2 -> printf "addu %s, %s, %s" rd r1 r2

@@ -11,7 +11,7 @@ import           Data.Maybe               (catMaybes, fromMaybe)
 import           Hscool.CGen.Intermediate
 import qualified Hscool.Types.AST         as A
 import           Text.Printf              (printf)
-
+import Debug.Trace(trace)
 
 preprocess :: A.TProgram -> Program
 preprocess (A.Program aClasses) = let
@@ -65,7 +65,7 @@ preprocess (A.Program aClasses) = let
                                 | t == "Int" ->
                                     Just $ A.IntConst "0"
                                 | t == "String" ->
-                                    Just $ A.StringConst ""
+                                    Just $ A.StringConst "\"\""
                                 | t == "Bool" ->
                                     Just $ A.BoolConst False
                                 | otherwise -> Nothing
