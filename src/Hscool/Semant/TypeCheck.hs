@@ -60,6 +60,8 @@ typeCheckExpr context expression = do
                           then currentClass cont
                           else et
                 (rt:fs) <- getMethod cont et' m
+                unless (length ats == length fs)
+                    $ Left "method called with wrong number of args"
                 unless (all (uncurry $ isSubtype cont) (zip ats fs))
                     $ Left "method called with wrong arguments"
                 let rt' = if rt == "SELF_TYPE"

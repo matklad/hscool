@@ -82,6 +82,8 @@ genObjectProto (Class tag name _ n_atts _) =
 
 protLabel :: String -> String
 protLabel name = name ++ "_protObj"
+initLabel :: String -> String
+initLabel name = name ++ "_init"
 
 intProto :: Int -> AssemblyCode
 intProto tag = gcTag
@@ -322,6 +324,7 @@ genExpr expr = case expr of
     New s -> return $ push ra0
         |> La ra0 (protLabel s)
         |> Jal lObjectCopy
+        |> Jal (initLabel s)
         |> swapra0
 
     IsVoid e -> do
@@ -349,7 +352,6 @@ postCall = Move rt0 ra0
     |> pop ra0
     |> pop rfp
     |> push rt0
-    |> Comment "End call"
 
 arith :: (String -> String -> String -> CodeLine) -> Expr -> Expr -> LState AssemblyCode
 arith op e1 e2 = do
