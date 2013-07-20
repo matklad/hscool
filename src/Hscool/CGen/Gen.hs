@@ -219,7 +219,7 @@ getLocOff i = do
     return $ (i + nP + 1) * 4
 
 attrOff :: Int -> Int
-attrOff i = (i + 12) * 4
+attrOff i = (i + 3) * 4
 
 genExpr :: Expr -> LState AssemblyCode
 genExpr expr = case expr of
