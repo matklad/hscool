@@ -273,6 +273,16 @@ genExpr expr = case expr of
             |> postCall
     Minus e1 e2 -> arith Subu e1 e2
     Add e1 e2 -> arith Addu e1 e2
+    Neg e -> do
+        ec <- genExpr e
+        return $ push ra0
+            |> ec
+            |> La ra0 lIntProtObj
+            |> Jal lObjectCopy
+            |> loadAttr rt0
+            |> Negu rt0 rt0
+            |> Sw rt0 attr1Off ra0
+            |> swapra0
     Eq e1 e2 -> do
         l1:l2:ls <- getLabels
         putLabels ls
@@ -287,9 +297,7 @@ genExpr expr = case expr of
             |> La ra0 lBoolConst1
             |> La ra1 lBoolConst0
             |> Jal lEqualityTest
-            |> pop rt0
-            |> push ra0
-            |> Move ra0 rt0
+            |> swapra0
             |> J l2
             |> Label l1
             |> La rt0 lBoolConst1
@@ -314,9 +322,7 @@ genExpr expr = case expr of
     New s -> return $ push ra0
         |> La ra0 (protLabel s)
         |> Jal lObjectCopy
-        |> pop rt0
-        |> push ra0
-        |> Move ra0 rt0
+        |> swapra0
 
     IsVoid e -> do
         ec <- genExpr e
@@ -346,27 +352,28 @@ postCall = Move rt0 ra0
     |> Comment "End call"
 
 arith :: (String -> String -> String -> CodeLine) -> Expr -> Expr -> LState AssemblyCode
-arith op e1 e2 = let
-        load r = pop r
-            |> Lw r attr1Off r
-    in
-        do
-            e1c <- genExpr e1
-            e2c <- genExpr e2
-            return $ push ra0
-                |> e2c
-                |> e1c
-                |> La ra0 lIntProtObj
-                |> Jal lObjectCopy
-                |> load rt1
-                |> load rt2
-                |> op rt0 rt1 rt2
-                |> Sw rt0 attr1Off ra0
-                |> pop rt0
-                |> push ra0
-                |> Move ra0 rt0
+arith op e1 e2 = do
+    e1c <- genExpr e1
+    e2c <- genExpr e2
+    return $ push ra0
+        |> e2c
+        |> e1c
+        |> La ra0 lIntProtObj
+        |> Jal lObjectCopy
+        |> loadAttr rt1
+        |> loadAttr rt2
+        |> op rt0 rt1 rt2
+        |> Sw rt0 attr1Off ra0
+        |> swapra0
 
+loadAttr :: String -> AssemblyCode
+loadAttr r = pop r
+    |> Lw r attr1Off r
 
+swapra0 :: AssemblyCode
+swapra0 = pop rt0
+    |> push ra0
+    |> Move ra0 rt0
 
 dispOff :: Int
 dispOff = 8

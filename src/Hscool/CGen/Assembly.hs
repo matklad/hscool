@@ -37,6 +37,7 @@ data CodeLine = Comment String
               | Addiu String String Int
               | Subu String String String
               | Addu String String String
+              | Negu String String
               | La String String
               | Move String String
 
@@ -74,6 +75,7 @@ instance Show CodeLine where
         Addiu r1 r2 i -> printf "addiu %s, %s, %d" r1 r2 i
         Subu rd r1 r2 -> printf "subu %s, %s, %s" rd r1 r2
         Addu rd r1 r2 -> printf "addu %s, %s, %s" rd r1 r2
+        Negu d s -> printf "negu %s, %s" d s
         La d imm -> printf "la %s, %s" d imm
         Move dest source -> printf "move %s, %s" dest source
 
