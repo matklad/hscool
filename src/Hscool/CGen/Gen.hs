@@ -330,9 +330,11 @@ genExpr expr = case expr of
         ecs <- mapM genExpr es
         return .toAsm $ intersperse popn ecs
     New s -> return $ push ra0
+        |> push rfp
         |> La ra0 (protLabel s)
         |> Jal lObjectCopy
         |> Jal (initLabel s)
+        |> pop rfp
         |> swapra0
 
     IsVoid e -> do
