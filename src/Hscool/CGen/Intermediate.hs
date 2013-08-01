@@ -34,5 +34,5 @@ data Expr =
 data Id = A Int | P Int | L Int | C String | S
     deriving Show
 
-data Branch = String Expr
+data Branch = Branch String Expr
     deriving Show

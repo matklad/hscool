@@ -5,12 +5,14 @@ import Hscool.CGen.Intermediate
 import Hscool.CGen.Preprocess(getIntLabel, getStringLabel, getBoolLabel, voidLabel)
 import Debug.Trace(trace)
 import Control.Monad.State
-import Data.List(intersperse)
+import Control.Applicative((<$>))
+import Data.List(intersperse, findIndex)
+import qualified Data.Map as M
 
 cgen :: Program -> AssemblyCode
 cgen (Program classes meths intConsts strConsts) = let
         protos = map genObjectProto classes
-        funcs = map genFunc meths
+        funcs = map (genFunc classes) meths
         tables = map makeDispTable classes
             |> classNameTab classes
         intTag = findTag classes "Int"
@@ -182,12 +184,12 @@ bar pops arguments
 a0 holds self on entry
 a0 holds ret on exit
 -}
-genFunc :: Method -> AssemblyCode
-genFunc (Method name nP nL e) = let
+genFunc :: [Class] -> Method -> AssemblyCode
+genFunc cs (Method name nP nL e) = let
         frameSize = (nP + nL + 1) * 4
         extendSize = (nL + 1) * 4
         labels = [name ++ "_lable_" ++ show i | i <- [1..]]
-        ec = evalState (genExpr e) (labels, nP)
+        ec = evalState (genExpr e) (labels, nP, cs)
     in
            Label name
         |> Sw rra 0 rsp
@@ -203,22 +205,27 @@ findTag :: [Class] -> String -> Int
 findTag cls s = let [Class tag _ _ _ _] = [c | c@(Class _ name _ _ _) <- cls, name == s]
     in tag
 
-type LState = State ([String], Int)
+type LState = State ([String], Int, [Class])
 
 getLabels :: LState [String]
 getLabels = do
-    (labels, _) <- get
+    (labels, _, _) <- get
     return labels
 
 putLabels :: [String] -> LState ()
 putLabels labels = do
-    (_, nP) <- get
-    put (labels, nP)
+    (_, nP, cs) <- get
+    put (labels, nP, cs)
 
 getLocOff :: Int -> LState Int
 getLocOff i = do
-    (_, nP) <- get
+    (_, nP, _) <- get
     return $ (i + nP + 1) * 4
+
+getClasses :: LState [Class]
+getClasses = do
+    (_, _, cs) <- get
+    return cs
 
 attrOff :: Int -> Int
 attrOff i = (i + 3) * 4
@@ -257,10 +264,12 @@ genExpr expr = case expr of
     Dispatch e i es -> do
         ec <- genExpr e
         esc <- mapM genExpr es
+        abort <- abortVoid lDispatchAbort
         return $ preCall
             |> ec
             |> esc
             |> Lw ra0 (4 * (1 + length es)) rsp
+            |> abort
             |> Lw rt0 dispOff ra0
             |> Lw rt0 (i * 4) rt0
             |> Jalr rt0
@@ -268,10 +277,12 @@ genExpr expr = case expr of
     StaticDispatch e (cls, i) es -> do
         ec <- genExpr e
         esc <- mapM genExpr es
+        abort <- abortVoid lDispatchAbort
         return $ preCall
             |> ec
             |> esc
             |> Lw ra0 (4 * (1 + length es)) rsp
+            |> abort
             |> La rt0 (cls ++ "_dispTab")
             |> Lw rt0 (i * 4) rt0
             |> Jalr rt0
@@ -364,7 +375,43 @@ genExpr expr = case expr of
             |> Label l2
             |> pushl voidLabel
 
+    TypeCase e bs -> genBranch e bs
+
     _ -> trace (show expr) $ return []
+
+
+genBranch :: Expr -> [Branch] -> LState AssemblyCode
+genBranch e bs = do
+    cs <- getClasses
+    let cm = M.fromList [(name, c)| c@(Class _ name _ _ _) <- cs]
+    let bt = [t | Branch t _ <- bs]
+    (end:bls, ls') <- splitAt (1 + length bs) <$> getLabels
+    putLabels ls'
+    abort <- abortVoid lCaseAbort2
+    let aux cname =  (case findIndex (==cname) bt of
+            Just i -> bls !! i
+            Nothing -> if cname == "Object"
+                       then lCaseAbort
+                       else let (Class _ _ pname _ _) = (cm M.! cname)
+                            in aux pname)
+    es' <- mapM genExpr [ex |(Branch _ ex) <- bs]
+    ec <- genExpr e
+    let cases = [Label l
+                 |> pop ra0
+                 |> e'
+                 |> J end
+                 | (e', l) <- zip es' bls]
+    let disp = [Li rt1 tag
+                |> Beq rt0 rt1 (aux name)
+                | Class tag name _ _ _ <- cs]
+    return $ ec
+        |> swapra0
+        |> abort
+        |> Lw rt0 tagOff ra0
+        |> disp
+        |> cases
+        |> Label end
+
 
 preCall :: AssemblyCode
 preCall = push rfp
@@ -377,17 +424,27 @@ postCall = Move rt0 ra0
     |> pop rfp
     |> push rt0
 
+abortVoid :: String -> LState AssemblyCode
+abortVoid abortLabel = do
+    l1:ls <- getLabels
+    putLabels ls
+    return $ Bnez ra0 l1
+        |> Li rt1 42 -- assume that error happened in the 42nd line of file named
+        |> La ra0 lStringProtObj
+        |> J abortLabel
+        |> Label l1
+
 arith :: (String -> String -> String -> CodeLine) -> Expr -> Expr -> LState AssemblyCode
 arith op e1 e2 = do
     e1c <- genExpr e1
     e2c <- genExpr e2
     return $ push ra0
-        |> e2c
         |> e1c
+        |> e2c
         |> La ra0 lIntProtObj
         |> Jal lObjectCopy
-        |> loadAttr rt1
         |> loadAttr rt2
+        |> loadAttr rt1
         |> op rt0 rt1 rt2
         |> Sw rt0 attr1Off ra0
         |> swapra0
@@ -419,6 +476,9 @@ swapra0 = pop rt0
     |> push ra0
     |> Move ra0 rt0
 
+
+tagOff :: Int
+tagOff = 0
 dispOff :: Int
 dispOff = 8
 attr1Off :: Int

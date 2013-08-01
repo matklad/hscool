@@ -6,7 +6,7 @@ import           Data.Hashable
 import           Data.List                (findIndex, unzip4, nub)
 import           Data.List.Utils          (replace)
 import qualified Data.Map                 as M
-import           Data.Maybe               (catMaybes, fromMaybe)
+import           Data.Maybe               (catMaybes, fromMaybe, mapMaybe)
 import           Hscool.CGen.Intermediate
 import qualified Hscool.Types.AST         as A
 import           Text.Printf              (printf)
@@ -68,8 +68,8 @@ preprocess (A.Program aClasses) = let
                                     Just $ A.BoolConst False
                                 | otherwise -> Nothing
 
-                defaults = catMaybes . map assignDefault $ [(n, t) | (A.Attribute n t _) <- attrs]
-                inits = (catMaybes [A.Expr t <$> (A.Assign n <$> aux e)| (A.Attribute n t e) <- attrs])
+                defaults = mapMaybe assignDefault [(n, t) | (A.Attribute n t _) <- attrs]
+                inits = catMaybes [A.Expr t <$> (A.Assign n <$> aux e)| (A.Attribute n t e) <- attrs]
                         ++ [A.Expr "SELF_TYPE" $ A.Object "self"]
 
                 dinits = defaults ++ inits
@@ -131,7 +131,13 @@ preprocess (A.Program aClasses) = let
                                 (nLoc2, e2', is2, ss2) = prepExpr objMap nLoc e2
                             in
                                 (maximum [nLoc1, nLoc2], Loop e1' e2', is1 ++ is2, ss1 ++ ss2)
-                        A.TypeCase _ _ -> error "don't now how to deal with branches yet =("
+                        A.TypeCase e bs -> let
+                                (nLoc1, e', is, ss) = prepExpr objMap nLoc e
+                                nLoc' = succ nLoc
+                                (nLocs, es', iss, sss) = unzip4 [prepExpr (M.insert n (L nLoc) objMap) nLoc' ex|A.Branch n _ ex <- bs]
+                                tc = TypeCase (Assign (L nLoc) e') [Branch t ex|(A.Branch _ t _, ex)<- zip bs es']
+                            in
+                                (maximum (nLoc1:nLocs), tc, concat (is:iss), concat (ss:sss))
                         A.Block es -> let
                                 (nLocs, es', iss, sss) = unzip4 . map (prepExpr objMap nLoc) $ es
                             in

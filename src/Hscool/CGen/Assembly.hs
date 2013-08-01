@@ -31,6 +31,7 @@ data CodeLine = Comment String
               | Jalr String
               | Jal String
               | Beqz String String
+              | Bnez String String
               | Beq String String String
               | Blt String String String
               | Ble String String String
@@ -74,6 +75,7 @@ instance Show CodeLine where
         Jalr r -> printf "jalr %s" r
         Jal s -> printf "jal %s" s
         Beqz s l -> printf "beqz %s, %s" s l
+        Bnez s l -> printf "bnez %s, %s" s l
         Beq r1 r2 l -> printf "beq %s, %s, %s" r1 r2 l
         Blt r1 r2 l -> printf "blt %s, %s, %s" r1 r2 l
         Ble r1 r2 l -> printf "ble %s, %s, %s" r1 r2 l
