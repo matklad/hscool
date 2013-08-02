@@ -21,6 +21,7 @@ data CodeLine = Comment String
               | Label String
               | Ascii String
               | Asciiz String
+              | Byte Int
               | Word Int
               | Wordl String
               | Data
@@ -46,6 +47,7 @@ data CodeLine = Comment String
               | Negu String String
               | La String String
               | Move String String
+              | Xori String Int
 
 instance Code CodeLine where
     toAsm l = [l]
@@ -61,15 +63,16 @@ dump codeLines = let
 
 instance Show CodeLine where
     show line = case line of
-        (Comment s) -> "# " ++ s
-        (Label s) -> s ++ ":"
-        (Ascii s) -> ".ascii " ++ show s
-        (Asciiz s) -> ".asciiz " ++ show s
-        (Word i) -> printf ".word %d" i
-        (Wordl s) -> ".word " ++ s
+        Comment s -> "# " ++ s
+        Label s -> s ++ ":"
+        Ascii s -> ".ascii " ++ show s
+        Asciiz s -> ".asciiz " ++ show s
+        Byte b -> ".byte " ++ show b
+        Word i -> printf ".word %d" i
+        Wordl s -> ".word " ++ s
         Data -> ".data"
         Text -> ".text"
-        (Global s) -> ".globl " ++ s
+        Global s -> ".globl " ++ s
         Jr r -> printf "jr %s" r
         J s -> printf "j %s" s
         Jalr r -> printf "jalr %s" r
@@ -90,6 +93,7 @@ instance Show CodeLine where
         Negu d s -> printf "negu %s, %s" d s
         La d imm -> printf "la %s, %s" d imm
         Move dest source -> printf "move %s, %s" dest source
+        Xori r i -> printf "xori %s, %d" r i
 
 
 push :: String -> AssemblyCode

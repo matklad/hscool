@@ -7,6 +7,7 @@ import Debug.Trace(trace)
 import Control.Monad.State
 import Control.Applicative((<$>))
 import Data.List(intersperse, findIndex)
+import Data.Char(ord)
 import qualified Data.Map as M
 
 cgen :: Program -> AssemblyCode
@@ -123,13 +124,22 @@ makeIntConst tag s = gcTag
     |> Word (read s)
 
 makeStrConst :: Int -> String -> AssemblyCode
-makeStrConst tag s = gcTag
-    |> Label (getStringLabel s)
-    |> Word tag
-    |> Word (5 + (length s `div` 4))
-    |> Wordl lStringDispTab
-    |> Wordl (getIntLabel . show . length $ s)
-    |> Asciiz s
+makeStrConst tag s =
+    let
+        aux x = case findIndex (=='\\') x of
+            Nothing -> [Asciiz x]
+            Just i -> let (h, _:t) = splitAt i x in
+                   Ascii h
+                |> Byte (ord '\\')
+                |> aux t
+    in
+            gcTag
+        |> Label (getStringLabel s)
+        |> Word tag
+        |> Word (5 + (length s `div` 4))
+        |> Wordl lStringDispTab
+        |> Wordl (getIntLabel . show . length $ s)
+        |> aux s
 
 makeBoolConst :: Int -> Bool -> AssemblyCode
 makeBoolConst tag b = gcTag
@@ -248,7 +258,7 @@ genExpr expr = case expr of
         ec <- genExpr e
         return $ ec
             |> Lw rt0 4 rsp
-            |> Sw rt0 (attrOff i) ra0
+            |> Sw rt0 (-4 * i) rfp
     Assign (A i) e -> do
         ec <- genExpr e
         return $ ec
@@ -299,6 +309,16 @@ genExpr expr = case expr of
             |> Jal lObjectCopy
             |> loadAttr rt0
             |> Negu rt0 rt0
+            |> Sw rt0 attr1Off ra0
+            |> swapra0
+    Comp e -> do
+        ec <- genExpr e
+        return $ push ra0
+            |> ec
+            |> La ra0 lBoolProtObj
+            |> Jal lObjectCopy
+            |> loadAttr rt0
+            |> Xori rt0 1
             |> Sw rt0 attr1Off ra0
             |> swapra0
     Eq e1 e2 -> do
@@ -397,7 +417,6 @@ genBranch e bs = do
     es' <- mapM genExpr [ex |(Branch _ ex) <- bs]
     ec <- genExpr e
     let cases = [Label l
-                 |> pop ra0
                  |> e'
                  |> J end
                  | (e', l) <- zip es' bls]
@@ -408,6 +427,7 @@ genBranch e bs = do
         |> swapra0
         |> abort
         |> Lw rt0 tagOff ra0
+        |> pop ra0
         |> disp
         |> cases
         |> Label end
